@@ -146,7 +146,6 @@ void CopiaSubstr(char str[], char strcopia[], int inic, int fim){
 
  j = 0;
  for(i = inic; i <= fim; i++){
-
   strcopia[j] = str[i];
   j++;
 
@@ -160,6 +159,8 @@ void ProcuraEmail(char str[], char email[]){
 
  int i, j;
 
+ i = 0;
+ 
  /*Encontra o índice do '@'*/
  while(str[i] != '\0'){
   if(str[i] == '@') break;
@@ -176,15 +177,15 @@ void ProcuraEmail(char str[], char email[]){
  else {
   j = i;
   
-  do{
-   j++;
-  }while(str[j] != ' ' || str[j] != '\0');
+  while(str[j + 1] != ' ' && str[j + 1] != '\0') j++;
 
-  while(i > 0){
+  while(i > 0 && str[i - 1] != ' '){
    if(str[i - 1] == ' ') break;
-   i--;
+   i--; 
   }
+  
   CopiaSubstr(str, email, i, j);
+ 
  }
 }
 
