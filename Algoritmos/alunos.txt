@@ -1,0 +1,5 @@
+4
+Paulo Miranda, 77880, 1.0, M
+Mauro Cappabianco, 94863, 0.8, M
+Carol Silva, 18554, 0.9, F
+Rafael Borges, 23465, 0.4, M
