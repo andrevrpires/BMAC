@@ -1,4 +1,4 @@
-import glob, zipfile, re, pyoo
+import glob, zipfile, re, pyoo, textract
 
 def removeXMLMarkup(s, replace_with_space):
     s = re.compile("<!--.*?-->", re.DOTALL).sub('', s)
@@ -31,7 +31,23 @@ for f in arquivos:
                          sheet[linha, 1].value = limpa
                          linha += 1
                     
+listapdfs = (glob.glob("*.pdf"))
+print(listapdfs)
 
+for pdf in listapdfs:
+
+    print(pdf)
+    text = str(textract.process(pdf), 'utf-8')
+
+    for w in text.split():
+        if re.search("\d{6}", w):
+            limpa = re.sub("\D","",w)
+            if len(limpa) == 6:
+                
+                sheet[linha, 0].value = pdf
+                sheet[linha, 1].value = limpa
+                linha += 1
+                    
 planilha.save('example.ods')
 planilha.close()
 
