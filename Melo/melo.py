@@ -38,6 +38,8 @@ for pdf in listapdfs:
 
     print(pdf)
     text = str(textract.process(pdf), 'utf-8')
+    if text == '':
+        print("PDF vazio")
 
     for w in text.split():
         if re.search("\d{6}", w):
@@ -48,6 +50,6 @@ for pdf in listapdfs:
                 sheet[linha, 1].value = limpa
                 linha += 1
                     
-planilha.save('example.ods')
+planilha.save('Novo.ods')
 planilha.close()
 
