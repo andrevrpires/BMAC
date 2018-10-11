@@ -8,48 +8,86 @@ def removeXMLMarkup(s, replace_with_space):
     s = re.compile("<[^>]*>", re.DOTALL).sub(repl, s)
     return s
 
+def buscapatrim(texto,matriz,cabecalho):
+
+    for l in texto:
+        for w in l.split():
+            if re.search("[2-6]\\d{5}", w):
+                numero = re.sub("\D","",w)              
+                if 200000 < int(numero) < 699999:
+                    linha = list(cabecalho)
+                    linha.append(numero)
+                    matriz.append(linha)
+
+def cabecalhoodt(texto,cabecalho):
+
+    listatexto = str.splitlines(texto)[1].split()
+    memoindex = listatexto.index('Memorando')
+    dataindex = listatexto.index('Data:')
+    deindex = listatexto.index('De:')
+    paraindex = listatexto.index('Para:')
+    if 'ref:' in listatexto:
+        fimindex = listatexto.index('ref:')
+    elif 'Ref:' in listatexto:
+        fimindex = listatexto.index('Ref:')
+    elif 'Assunto:' in listatexto:
+        fimindex = listatexto.index('Assunto:')
+    else:
+        print("ERRO!!!")
+        print(cabecalho[0])
+        exit(1)
+
+    cabecalho.append(listatexto[memoindex+1:dataindex])
+    cabecalho.append(listatexto[dataindex+1:deindex])
+    cabecalho.append(listatexto[deindex+1:paraindex])
+    cabecalho.append(listatexto[paraindex+1:fimindex])
+
+    print(cabecalho)
+    return cabecalho
+
+def parseodt(matriz):
+
+    listaodts = (glob.glob("*.odt"))
+    for f in listaodts:
+        myfile = zipfile.ZipFile(f)
+        listoffiles = myfile.infolist()
+
+        for s in listoffiles:
+            if s.orig_filename == "content.xml":
+                cabecalho = []
+                cabecalho.append(f)
+                textoXML = str(myfile.read(s.orig_filename), 'utf-8')
+                texto = removeXMLMarkup(textoXML, replace_with_space=1)
+                cabecalho = cabecalhoodt(texto,cabecalho)
+                buscapatrim(texto,matriz,cabecalho)
+
+def parsepdf(matriz):
+
+    listapdfs = (glob.glob("*.pdf"))
+    for pdf in listapdfs:
+        texto = str.splitlines(str(textract.process(pdf), 'utf-8'))
+        if texto == '':
+            print("PDF vazio")
+        else:
+            cabecalho = []
+            cabecalho.append(pdf)
+            for i in range(1,10,2):
+                cabecalho.append(texto[i])
+            buscapatrim(texto,matriz,cabecalho) 
+
+
+matriz = []
+#parseodt(matriz)
+parsepdf(matriz)
+
 desktop = pyoo.Desktop()
-planilha = desktop.create_spreadsheet()
-sheet = planilha.sheets[0]
-linha = 0
+doc = desktop.create_spreadsheet()
+sheet = doc.sheets[0]
 
-arquivos = (glob.glob("*.odt"))
+for i in range(len(matriz)):
+    for j in range(len(matriz[i])):
+        sheet[i,j].value = matriz[i][j]
 
-for f in arquivos:
-    myfile = zipfile.ZipFile(f)
-    listoffiles = myfile.infolist()
-
-    for s in listoffiles:
-        if s.orig_filename == "content.xml":
-            content = str(myfile.read(s.orig_filename), 'utf-8')
-            content = removeXMLMarkup(content, replace_with_space=1)
-            for w in content.split():
-                if re.search("[3-6]\\d{5}", w):
-                    limpa = re.sub("\D","",w)
-                    if len(limpa) == 6:
-                         sheet[linha, 0].value = f
-                         sheet[linha, 1].value = limpa
-                         linha += 1
-                    
-listapdfs = (glob.glob("*.pdf"))
-print(listapdfs)
-
-for pdf in listapdfs:
-
-    print(pdf)
-    text = str(textract.process(pdf), 'utf-8')
-    if text == '':
-        print("PDF vazio")
-
-    for w in text.split():
-        if re.search("\d{6}", w):
-            limpa = re.sub("\D","",w)
-            if len(limpa) == 6:
-                
-                sheet[linha, 0].value = pdf
-                sheet[linha, 1].value = limpa
-                linha += 1
-                    
-planilha.save('Novo.ods')
-planilha.close()
+doc.save('Novo.ods')
+doc.close()
 
