@@ -71,7 +71,7 @@ def parsepdf(matriz):
         else:
             cabecalho = []
             cabecalho.append(pdf)
-            for i in range(1,10,2):
+            for i in range(1,14,2):
                 cabecalho.append(texto[i])
             buscapatrim(texto,matriz,cabecalho) 
 
