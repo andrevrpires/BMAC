@@ -1,4 +1,6 @@
-import glob, zipfile, re, pyoo, textract
+#!/usr/bin/python3
+
+import glob, zipfile, re, pyoo, textract #, subprocess
 
 def removeXMLMarkup(s, replace_with_space):
     s = re.compile("<!--.*?-->", re.DOTALL).sub('', s)
@@ -76,9 +78,13 @@ def parsepdf(matriz):
             buscapatrim(texto,matriz,cabecalho) 
 
 
+
+
 matriz = []
 #parseodt(matriz)
 parsepdf(matriz)
+
+#proc = subprocess.call('soffice --accept="socket,host=localhost,port=2002;urp;" --norestore --nologo --nodefault # --headless', shell=True)
 
 desktop = pyoo.Desktop()
 doc = desktop.create_spreadsheet()
@@ -91,3 +97,4 @@ for i in range(len(matriz)):
 doc.save('Novo.ods')
 doc.close()
 
+#proc.terminate()
