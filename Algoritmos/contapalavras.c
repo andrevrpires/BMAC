@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-/*Conta palavras numa frase-vetor*/
+/*Conta palavras numa string*/
 
 void ContaPalavras(char str[], int *numpalavras){
 
