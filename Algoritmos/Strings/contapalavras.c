@@ -15,9 +15,7 @@ void ContaPalavras(char str[], int *numpalavras){
    (*numpalavras)++;
    while(str[i] != ' '&& str[i] != '\0') i++;
   }
- 
  }
-
 }
 
 
@@ -26,14 +24,12 @@ void CopiaSubstr(char str[], char strcopia[], int inic, int fim){
  int i, j;
 
  j = 0;
- for(i = inic; i <= fim; i++){
+ for(i = inic; i < fim; i++){ 
   strcopia[j] = str[i];
   j++;
-
  }
 
  strcopia[j] = '\0';
-
 }
 
 
@@ -59,17 +55,17 @@ char **VetordePalavras(char str[], int *numpalavras){
   
   /*percorre a palavra até encontrar seu final*/
   k = j;
-  while(str[k + 1] != ' ' && str[k + 1] != '\0') k++;
+  while(str[k] != ' ' && str[k] != '\0') k++;
 
   /*aloca a memoria para a palavra*/
-  palavra = malloc((k - j + 2)*sizeof(char));
+  palavra = malloc((k - j + 1)*sizeof(char));
 
   /*grava os caracteres da palavra na memoria alocada*/
   CopiaSubstr(str, palavra, j, k);
 
   /*grava o endereço da palavra no Vetor de Palavras*/
   VP[i] = palavra;
-
+  j = k;
  }
 
  return VP;
@@ -77,51 +73,22 @@ char **VetordePalavras(char str[], int *numpalavras){
 }
 
 
-/*Inverte um vetor lido do prompt, onde o primeiro elemento eh seu tamanho*/
-
-void PrintaInvertido(){
-
- int tam, i, num;
- int *vet = NULL;
-
- /*leh tamanho do vetor*/
- scanf("%d", &tam);
-
- /*aloca vetor com n inteiros*/
- vet = (int *)malloc(tam*sizeof(int));
-
- /*grava no vetor*/
- for(i = 0;i < tam;i++){
-  scanf("%d", &num);
-  vet[i] = num;
- }
-
- /*printa invertido*/
- for(i = tam - 1;i >= 0;i--)
-  printf("%d ", vet[i]);
-
- printf("\n");
-
- /*libera memoria*/
- free(vet);
-
-}
-
 int main(){
 	
- char frase[] = "   a  tentativa eh um comeco e um comeco    eh uma tentativa  ";
+ char frase[200];
  int qtdpalavras = 0, i;
  char **F; 
 
- VetordePalavras(frase, &qtdpalavras);
- printf("%d", qtdpalavras);
- printf("\n");
+ printf("Digite uma frase para ser splitada: ");
+ scanf("%[^\n]", frase);
 
  F = VetordePalavras(frase, &qtdpalavras);
- for(i = 0; i < qtdpalavras; i++) printf("%s.\n", F[i]);
 
- i = 0;
- for(i = 0; i < qtdpalavras; i++) free(F[i]);
+ for(i = 0; i < qtdpalavras; i++)
+  printf("%s\n", F[i]);
+
+ for(i = 0; i < qtdpalavras; i++)
+  free(F[i]);
  free(F);
 
 }
