@@ -1,11 +1,20 @@
+/*Este codigo contem toda a materia de listas ligadas da disciplina MAC0122, cursada no 2 semestre de 2018
+  mais informacoes podem ser encontradas no site do professor:
+  http://www.vision.ime.usp.br/~pmiranda/mac122_2s18/page/aulas_mac122.html#A6
+*/
+
+
 #include <stdio.h>
 #include <stdlib.h>
+
+/*Estrutura basica de um bloco de lista ligada (nao dupla)*/
 
 struct Bloco{
  int dado;
  struct Bloco *prox;
 };
 
+/*Aloca um no (bloco)*/
 struct Bloco *AlocaNoLista(){
  struct Bloco *q;
  q = (struct Bloco *)malloc(sizeof(struct Bloco)); 
@@ -14,6 +23,7 @@ struct Bloco *AlocaNoLista(){
  return q;
 }
 
+/*Funcoes em listas Sem no cabeca*/
 void InsereListaSkbca(struct Bloco **p, int x){
  struct Bloco *n, *t;
  t = *p;
@@ -32,6 +42,43 @@ void RemoveListaSkbca(struct Bloco **p){
  }
 }
 
+void InsereAposCircularSkbca(struct Bloco **p, int x){
+ struct Bloco *q, *t;
+ t = *p;
+ q = AlocaNoLista();
+ if(t == NULL){
+  q->prox = q;
+  t = q;
+ }
+ else{
+  q->prox = t->prox;
+  t->prox = q;
+ }
+}
+
+void RemoveAposCircularSkbca(struct Bloco **p){
+ struct Bloco *q;
+ struct Bloco *t;
+ t = *p;
+ if(t == NULL) return;
+ q = t->prox;
+ if(q == t) t = NULL;
+ else t->prox = q->prox;
+ free(q);
+}
+
+struct Bloco *BuscaCircular(struct Bloco *p, int x){
+ struct Bloco *q;
+ if(p == NULL) return NULL;
+ q = p;
+ do{
+  if(q->dado == x) return q;
+  q = q->prox;
+ }while(q != p);
+ return NULL;
+}
+
+/*Funcoes em listas Com no cabeca*/
 struct Bloco *CriaNoKbca(){
  struct Bloco *q;
  q = AlocaNoLista();
@@ -65,14 +112,6 @@ void RemoveAposLista(struct Bloco *p){
  }
 }
 
-void InsereAposCircular(struct Bloco *p, int x){
- struct Bloco *q;
- q = AlocaNoLista();
- q->dado = x;
- q->prox = p->prox;
- p->prox = q;
-}
-
 void RemoveAposCircular(struct Bloco *p){
  struct Bloco *q;
  q = p->prox;
@@ -82,37 +121,12 @@ void RemoveAposCircular(struct Bloco *p){
  }
 }
 
-void InsereAposCircularSkbca(struct Bloco **p, int x){
- struct Bloco *q, *t;
- t = *p;
- q = AlocaNoLista();
- if(t == NULL){
-  q->prox = q;
-  t = q;
- }
- else{
-  q->prox = t->prox;
-  t->prox = q;
- }
-}
-
-void RemoveAposCircularSkbca(struct Bloco **p){
+void ImprimeLista(struct Bloco *p){
  struct Bloco *q;
- struct Bloco *t;
- t = *p;
- if(t == NULL) return;
- q = t->prox;
- if(q == t) t = NULL;
- else t->prox = q->prox;
- free(q);
-}
-
-void ImprimeLista(struct Bloco *L){
- struct Bloco *T;
- T = L;
- while(T != NULL){
-  printf("%d ", T->dado);
-  T = T->prox;
+ q = p;
+ while(q != NULL){
+  printf("%d ", q->dado);
+  q = q->prox;
  }
  printf("\n");
 }
@@ -131,21 +145,7 @@ void ImprimeCircular(struct Bloco *p){
  }
 }
 
-struct Bloco *BuscaCircular(struct Bloco *p, int x){
- struct Bloco *q;
- if(p == NULL) return NULL;
- q = p;
- do{
-  if(q->dado == x) return q;
-  q = q->prox;
- }while(q != p);
- return NULL;
-}
-
-/* O parâmetro p deve apontar para o nó-cabeça. 
-A função devolve o apontador para o primeiro 
-nó que contém o dado x. */
-struct Bloco * BuscaCircularCkbca(struct Bloco *p, int x){
+struct Bloco *BuscaCircularCkbca(struct Bloco *p, int x){
  struct Bloco *q;
  p->dado = x;
  q = p;
@@ -156,27 +156,26 @@ struct Bloco * BuscaCircularCkbca(struct Bloco *p, int x){
  if(q == p) return NULL;
  else return q;
 }
-	
 
-void LiberaLista(struct Bloco *L){
- struct Bloco *P;
-  while(L != NULL){
-  P = L->prox;
-  free(L);
-  L = P;
+void LiberaLista(struct Bloco *p){
+ struct Bloco *q;
+  while(p != NULL){
+  q = p->prox;
+  free(p);
+  p = q;
  }
 }
 
-struct Bloco *InverteLista(struct Bloco *L){
- struct Bloco *I, *A = NULL;
- I = L;
- while(I != NULL){
-  L = L->prox;
-  I->prox = A;
-  A = I;
-  I = L;
+struct Bloco *InverteLista(struct Bloco *p){
+ struct Bloco *q, *a = NULL;
+ q = p;
+ while(q != NULL){
+  p = p->prox;
+  q->prox = a;
+  a = q;
+  q = p;
  }
- return A;
+ return a;
 }
 
 int main(){
