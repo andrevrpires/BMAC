@@ -23,7 +23,7 @@ struct Bloco *AlocaNoLista(){
  return q;
 }
 
-/*Funcoes em listas Sem no cabeca*/
+/*Funcoes para listas Sem no cabeca*/
 void InsereListaSkbca(struct Bloco **p, int x){
  struct Bloco *n, *t;
  t = *p;
@@ -35,7 +35,7 @@ void InsereListaSkbca(struct Bloco **p, int x){
 
 void RemoveListaSkbca(struct Bloco **p){
  struct Bloco *r;
- r = *p;
+ r = *p;	
  if(r != NULL){
   *p = r->prox;
   free(r);
@@ -78,7 +78,7 @@ struct Bloco *BuscaCircular(struct Bloco *p, int x){
  return NULL;
 }
 
-/*Funcoes em listas Com no cabeca*/
+/*Funcoes para listas Com no cabeca*/
 struct Bloco *CriaNoKbca(){
  struct Bloco *q;
  q = AlocaNoLista();
@@ -152,7 +152,7 @@ struct Bloco *BuscaCircularCkbca(struct Bloco *p, int x){
  do{
   q = q->prox;
  }while(q->dado != x);
- p->dado = -1;
+	 p->dado = -1;
  if(q == p) return NULL;
  else return q;
 }
@@ -176,6 +176,72 @@ struct Bloco *InverteLista(struct Bloco *p){
   q = p;
  }
  return a;
+}
+
+/* Listas duplamente ligadas */
+typedef int TipoDado;
+
+typedef struct _BlocoDuplo{
+ struct _BlocoDuplo *esq;
+ TipoDado           dado;
+ struct _BlocoDuplo *dir;
+}BlocoDuplo;	
+
+typedef *BlocoDuplo ListaDupla;
+
+BlocoDuplo *AlocaNoListaDupla(){
+ BlocoDuplo *q;
+ q = (BlocoDuplo *)calloc(1, sizeof(BlocoDuplo));
+ if(q == NULL) exit(1);
+ return q;	
+}
+
+ListaDupla CriaNoKbcaDupla(){
+ BlocoDuplo *q;
+ q = AlocaNoListaDupla();
+ q->esq = q;
+ q->dado = -1;
+ q->dir = q;
+ return q;	
+}
+
+void ImprimeListaDuplaCircular(ListaDupla p){
+ BlocoDuplo *q;
+ q = p;
+ do{
+  ImprimeElemento(q->dado);
+  q = q->dir;	
+ }while(q!=p);
+ printf("\n");
+}
+
+void ImprimeListaDuplaCircularReversa(ListaDupla p){
+ BlocoDuplo *q;
+ q = p;
+ do{
+  ImprimeElemento(q->dado);
+  q = q->esq;	
+ }while(q!=p);
+ printf("\n");
+}
+
+void InsereDuplaCircular(BlocoDuplo *p, TipoDado x){
+ BlocoDuplo *q;
+ q = AlocaNoListaDupla();
+ q->dado = x;
+ q->dir = p->dir;
+ p->dir = q;
+ q->esq = p;
+ q = q->	dir;
+ q->esq	 = p->dir;
+}
+
+/* Listas Duplamente Ligadas Permitem a remocao do proprio no recebido como argumento
+ * Cuidado para nao remover o no kbca!!! */
+void RemoveDuplaCircular(BlocoDuplo *p, TipoDado x){
+ (p->esq)->dir = p->dir;
+ (p->dir)->esq = p->esq;
+ free(p);
 }
 
 int main(){
