@@ -16,7 +16,7 @@ def buscapatrim(texto,matriz,cabecalho):
         for w in l.split():
             if re.search("[2-6]\\d{5}", w):
                 numero = re.sub("\D","",w)              
-                if 200000 < int(numero) < 699999:
+                if int(numero) < 699999:
                     linha = list(cabecalho)
                     linha.append(numero)
                     matriz.append(linha)

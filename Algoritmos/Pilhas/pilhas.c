@@ -1,12 +1,12 @@
-#include<sdtlib.h>
+#include<stdlib.h>
 
 /* Pilha com lista ligada */
 
 typedef int TipoDado;
 
 typedef struct _BlocoPilha{
-TipoDado           *dado;
-struct _BlocoPilha *prox;
+ TipoDado            dado;
+ struct _BlocoPilha *prox;
 }BlocoPilha;
 
 typedef BlocoPilha *Pilha;
@@ -29,7 +29,7 @@ Pilha CriaPilha(){
 
 void LiberaPilha(Pilha p){
  Pilha q;
- q = p
+ q = p;
  while(q != NULL){
   p = p->prox;
   free(q);
@@ -63,7 +63,7 @@ TipoDado Desempilha(Pilha p){
 
 /* Pilha sequencial */
 
-#define TAM_MAX 1000;
+#define TAM_MAX 1000
 
 typedef struct _VetorPilha{
  int          topo;
@@ -72,7 +72,7 @@ typedef struct _VetorPilha{
 
 typedef VetorPilha *PilhaSeq;
 
-PilhaSeq CriaPilha(){
+PilhaSeq CriaPilhaSeq(){
  PilhaSeq q;
  q = (PilhaSeq)calloc(1, sizeof(VetorPilha));
  if(q == NULL) exit(-1);
@@ -80,30 +80,28 @@ PilhaSeq CriaPilha(){
  return q;
 }
 
-void LiberaPilha(Pilha p){
+void LiberaPilhaSeq(PilhaSeq p){
  free(p);
 }
 
-bool PilhaVazia(Pilha p){
+bool PilhaSeqVazia(PilhaSeq p){
  return (p->topo == 0);
 }
 
-void Empilha(Pilha p, TipoDado x){
+void EmpilhaSeq(PilhaSeq p, TipoDado x){
  if(p->topo == TAM_MAX) exit(-1);
- p->topo += 1;
- p->dado = x;
+ p->array[p->topo] = x;
+ p->topo++;
 }
 
-TipoDado Desempilha(Pilha p){
- TipoDado x;
- Pilha q;
- if(!PilhaVazia){
-  q = p->prox;
-  x = q->dado;
-  p->prox = q->prox;
-  free(q);
-  return x;
- }
- exit(-1);
+TipoDado DesempilhaSeq(PilhaSeq p){
+ if(p->topo == 0) exit(-1);
+ p->topo--;
+ return p->array[p->topo];
 }
 
+int main(){
+
+ return 0;
+
+}
