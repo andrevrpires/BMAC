@@ -232,7 +232,7 @@ void InsereDuplaCircular(BlocoDuplo *p, TipoDado x){
  q->dir = p->dir;
  p->dir = q;
  q->esq = p;
- q = q->	dir;
+ q = q->dir;
  q->esq	 = p->dir;
 }
 
