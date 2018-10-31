@@ -1,4 +1,5 @@
 #include<stdlib.h>
+#include<stdio.h>
 
 typedef int TipoDado;
 
@@ -66,14 +67,18 @@ TipoDado RemoveFila(Fila *f){
 }
 
 
-
-
-
-
-
-
 int main(){
 
+ Fila f;
+ f = CriaFila();
+ InsereFila(&f, 1);
+ InsereFila(&f, 3);
+ InsereFila(&f, 5);
+ InsereFila(&f, 8);
+ while(!FilaVazia(f))
+  printf("%d ", RemoveFila(&f));
+ printf("\n");
+ LiberaFila(f);
  return 0;
 
 }

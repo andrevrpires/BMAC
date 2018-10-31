@@ -1,4 +1,5 @@
 #include<stdlib.h>
+#include<stdio.h>
 
 /* Pilha com lista ligada */
 
@@ -102,6 +103,24 @@ TipoDado DesempilhaSeq(PilhaSeq p){
 
 int main(){
 
+ Pilha p;
+ PilhaSeq ps;
+ TipoDado x;
+ 
+ p = CriaPilha();
+ ps = CriaPilhaSeq();
+ 
+ Empilha(p, 1);
+ Empilha(p, 3);
+ Empilha(p, 5);
+ Empilha(p, 8);
+ while(!PilhaVazia(p));
+  x = Desempilha(p);
+  EmpilhaSeq(ps, x);
+ while(!PilhaSeqVazia(ps));
+  x = DesempilhaSeq(ps);
+  printf("%d ", x);
+ printf("\n");
  return 0;
 
 }
