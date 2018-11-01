@@ -1,11 +1,9 @@
 #include<stdlib.h>
 #include<stdio.h>
 
-/* int main(){}; */
+int main(){};
 
 /* Pilha com lista ligada */
-
-typedef int TipoDado;
 
 typedef struct _BlocoPilha{
  TipoDado            dado;
@@ -102,7 +100,7 @@ TipoDado DesempilhaSeq(PilhaSeq p){
  return p->array[p->topo];
 }
 
-
+/*
 int main(){
 
  Pilha p;
@@ -135,4 +133,5 @@ int main(){
 
  return 0;
 
-} 
+}
+*/

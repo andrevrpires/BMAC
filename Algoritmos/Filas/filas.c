@@ -1,8 +1,6 @@
 #include<stdlib.h>
 #include<stdio.h>
 
-typedef int TipoDado;
-
 typedef struct _BlocoFila{
  TipoDado           dado;
  struct _BlocoFila *prox;
