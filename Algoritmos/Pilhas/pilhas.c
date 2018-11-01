@@ -1,6 +1,8 @@
 #include<stdlib.h>
 #include<stdio.h>
 
+/* int main(){}; */
+
 /* Pilha com lista ligada */
 
 typedef int TipoDado;
@@ -53,14 +55,13 @@ void Empilha(Pilha p, TipoDado x){
 TipoDado Desempilha(Pilha p){
  TipoDado x;
  Pilha q;
- if(PilhaVazia) exit(-1);
+ if(PilhaVazia(p)) exit(-1);
  q = p->prox;
  x = q->dado;
  p->prox = q->prox;
  free(q);
  return x;
 }
-
 
 /* Pilha sequencial */
 
@@ -101,26 +102,37 @@ TipoDado DesempilhaSeq(PilhaSeq p){
  return p->array[p->topo];
 }
 
+
 int main(){
 
  Pilha p;
  PilhaSeq ps;
  TipoDado x;
- 
+
  p = CriaPilha();
  ps = CriaPilhaSeq();
- 
+
  Empilha(p, 1);
  Empilha(p, 3);
  Empilha(p, 5);
  Empilha(p, 8);
- while(!PilhaVazia(p));
+ 
+ while(!PilhaVazia(p)){
   x = Desempilha(p);
+  printf("%d ", x);
   EmpilhaSeq(ps, x);
- while(!PilhaSeqVazia(ps));
+ }
+ printf("\n");
+
+ while(!PilhaSeqVazia(ps)){
   x = DesempilhaSeq(ps);
   printf("%d ", x);
+ }
+
  printf("\n");
+ LiberaPilha(p);
+ LiberaPilhaSeq(ps);
+
  return 0;
 
-}
+} 

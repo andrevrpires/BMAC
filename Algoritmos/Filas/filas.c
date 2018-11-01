@@ -66,7 +66,7 @@ TipoDado RemoveFila(Fila *f){
  return x;
 }
 
-
+/*
 int main(){
 
  Fila f;
@@ -82,3 +82,4 @@ int main(){
  return 0;
 
 }
+*/
