@@ -1,12 +1,35 @@
-bool Precedencia(char c){
+#include<stdio.h>
+#include<stdlib.h>
 
+typedef int TipoDado;
 
+#include "pilhas_lig.c"
+
+int ValorOperador(char c){
+
+ switch(c){
+  case '(':
+   return 0;
+  case '+':
+  case '-': 
+   return 1;
+  case '*':
+  case '/':
+   return 2;
+  case '^':
+   return 3;
+ }
+ exit(-1);
+}
+
+bool Precedencia(char t, char c){
+ return (ValorOperador(t) > ValorOperador(c) && ValorOperador(t) != 3);
 }
 
 void In2Pos(char expr[]){
  Pilha P;
  int i;
- char c;
+ char c, t;
 
  P = CriaPilha();
 
@@ -18,26 +41,30 @@ void In2Pos(char expr[]){
   i++;
 
   switch(c){
-   case: '('
-    Empilha(P, c)
+   case '(':
+    Empilha(P, c);
     break;
-   case: ')'
-    break;
-   case: '\0'
-    break;
-   case: '+'
-   case: '-'
-   case: '*'
-   case: '/'
-   case: '^'
+   case ')':
+   case '\0':
     t = Desempilha(P);
-    if(Precedencia(t, c){
+    while(t != '('){
      printf("%c", t);
-     Empilha
+     t = Desempilha(P);
+    }
+    break;
+   case '+':
+   case '-':
+   case '*':
+   case '/':
+   case '^':
+    t = Desempilha(P);
+    if(Precedencia(t, c)){
+     printf("%c", t);
+     Empilha(P, c);
     }
     else{
-     Empilha(t);
-     Empilha(c);
+     Empilha(P, t);
+     Empilha(P, c);
     }
     break;
    default:
@@ -47,11 +74,12 @@ void In2Pos(char expr[]){
  }while(c != '\0');
 
  LiberaPilha(P);
+ printf("\n");
 }
 
 int main(){
 
- char expr[]="a*(b+c)*(d-g)*h";
+ char expr[]="a*(b+c)*(d-g)^h^i*j";
  
  In2Pos(expr);
  
