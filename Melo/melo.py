@@ -1,8 +1,17 @@
 #!/usr/bin/python3
 
-# este script cria uma planilha de patrimonios a partir de um memorando em pdf ou odt
+########################################################################################
+##
+## Este script cria uma planilha de patrimonios a partir de memorandos em pdf
+## O script deve ser executado na pasta onde os pdfs se encontram
+## 
+##
+##
+########################################################################################
 
-import glob, zipfile, re, pyoo, textract #, subprocess
+
+import glob, zipfile, re, pyoo, textract, time, sys
+from subprocess import call
 
 
 def removeXMLMarkup(s, replace_with_space):
@@ -117,38 +126,52 @@ def parsepdf(matriz):
             cabecalho.append(pdf)
             # itens do cabecalho memorando
             for i in range(1,14,2):
-                cabecalho.append(texto[i])
-            
+                try:
+                    cabecalho.append(texto[i])
+                except:
+                     cabecalho.append('') 
             # extrai os codigos dos patrimonios
             buscapatrim(texto,matriz,cabecalho) 
 
+def geraplanilha(matriz):
 
-def main():
+    # recebe a matriz já com os dados, gera uma planilha e salva
 
- # cria a matriz que recebe os dados
- matriz = []
+    # comando bash que inicializa o LibreOffice
+    officeon = call('gnome-terminal -- soffice --accept="socket,host=localhost,port=2002;urp;" --norestore --nologo --nodefault # --headless &', shell=True)
+    # aguarda inicializar
+    time.sleep(5)
 
- # extrai os dados dos arquivos, preenchendo a matriz
- #parseodt(matriz)
- parsepdf(matriz)
+    # cria uma planilha no Calc
+    desktop = pyoo.Desktop()
+    doc = desktop.create_spreadsheet()
+    sheet = doc.sheets[0]
+ 
+    # preenche a planilha com os dados da matriz
+    for i in range(len(matriz)):
+        for j in range(len(matriz[i])):
+            sheet[i,j].value = matriz[i][j]
 
- # inicializa o LibreOffice
- #proc = subprocess.call('soffice --accept="socket,host=localhost,port=2002;urp;" --norestore --nologo --nodefault # --headless', shell=True)
+    # salva a planilha
+    doc.save('NovaPlanilha.ods')
+    # fecha a planilha
+    doc.close()
 
- # cria uma planilha no Calc
- desktop = pyoo.Desktop()
- doc = desktop.create_spreadsheet()
- sheet = doc.sheets[0]
+    # o LibreOffice encerra? 
 
- # preenche a planilha com os dados da matriz
- for i in range(len(matriz)):
-    for j in range(len(matriz[i])):
-        sheet[i,j].value = matriz[i][j]
+if __name__ == '__main__':
 
- # salva a planilha
- doc.save('Novo.ods')
- #fecha a planilha
- doc.close()
+    if sys.argv[1] == '-o':
+        # comando bash que transforma os pdfs comuns em pesquisaveis(subprocess)
+        call('ls | while read line; do ocrmypdf "$line" "$line"; done', shell=True)
 
- #encerra o office
- #proc.terminate()
+
+    # cria a matriz que recebe os dados
+    matriz = []
+
+    # extrai os dados dos arquivos, preenchendo a matriz
+    ##parseodt(matriz)
+    parsepdf(matriz)
+
+    # copia os dados da matriz para uma planilha
+    geraplanilha(matriz)
