@@ -4,26 +4,17 @@
 ##
 ## Este script cria uma planilha de patrimonios a partir de memorandos em pdf
 ## O script deve ser executado na pasta onde os pdfs se encontram
-## 
+##  
+## Cheguei a começar a implementacao de memorandos em odt, mas suspendi
 ##
+##
+## André Vinícius
 ##
 ########################################################################################
 
 
-import glob, zipfile, re, pyoo, textract, time, sys
+import glob, re, pyoo, textract, time, sys, argparse
 from subprocess import call
-
-
-def removeXMLMarkup(s, replace_with_space):
-
-    # remove marcacao XML de arquivos de texto(copiado e colado de loook)
-
-    s = re.compile("<!--.*?-->", re.DOTALL).sub('', s)
-    repl = ''
-    if replace_with_space:
-        repl = ' '
-    s = re.compile("<[^>]*>", re.DOTALL).sub(repl, s)
-    return s
 
 
 def buscapatrim(texto,matriz,cabecalho):
@@ -43,63 +34,6 @@ def buscapatrim(texto,matriz,cabecalho):
                     linha.append(numero)
                     matriz.append(linha)
 
-
-def cabecalhoodt(texto,cabecalho):
-
-    # extrai o vetor cabecalho inteiro e com imperfeicoes
-    listatexto = str.splitlines(texto)[1].split()
-    
-    # busca a posicao dos dados passados como parametro
-    memoindex = listatexto.index('Memorando')
-    dataindex = listatexto.index('Data:')
-    deindex = listatexto.index('De:')
-    paraindex = listatexto.index('Para:')
-    if 'ref:' in listatexto:
-        fimindex = listatexto.index('ref:')
-    elif 'Ref:' in listatexto:
-        fimindex = listatexto.index('Ref:')
-    elif 'Assunto:' in listatexto:
-        fimindex = listatexto.index('Assunto:')
-    else:
-        print("ERRO!!!")
-        print(cabecalho[0])
-        exit(1)
-
-    # preenche os itens do vetor cabecalho com os dados limpos
-    cabecalho.append(listatexto[memoindex+1:dataindex])
-    cabecalho.append(listatexto[dataindex+1:deindex])
-    cabecalho.append(listatexto[deindex+1:paraindex])
-    cabecalho.append(listatexto[paraindex+1:fimindex])
-
-    # print para conferencia
-    print(cabecalho)
-
-def parseodt(matriz):
-
-    # extrai os dados de um odt e transforma em texto
-
-    # lista todos os arquivos odt da pasta
-    listaodts = (glob.glob("*.odt"))
-    for f in listaodts:
-
-        # extrai os arquivos internos do odt
-        myfile = zipfile.ZipFile(f)
-        listoffiles = myfile.infolist()
-
-        for s in listoffiles:
-            if s.orig_filename == "content.xml":
-                # cria o vetor cabecalho dos dados
-                cabecalho = []
-                # nome do arquivo
-                cabecalho.append(f)
-                # extrai os dados do odt
-                textoXML = str(myfile.read(s.orig_filename), 'utf-8')
-                # remova a marcacao XML
-                texto = removeXMLMarkup(textoXML, replace_with_space=1)
-                # preeche o cabecalho
-                cabecalho = cabecalhoodt(texto,cabecalho)
-                # extrai os codigos dos patrimonios
-                buscapatrim(texto,matriz,cabecalho)
 
 def parsepdf(matriz):
 
@@ -133,6 +67,7 @@ def parsepdf(matriz):
             # extrai os codigos dos patrimonios
             buscapatrim(texto,matriz,cabecalho) 
 
+
 def geraplanilha(matriz):
 
     # recebe a matriz já com os dados, gera uma planilha e salva
@@ -157,21 +92,107 @@ def geraplanilha(matriz):
     # fecha a planilha
     doc.close()
 
-    # o LibreOffice encerra? 
+    # o LibreOffice encerra como? 
+
 
 if __name__ == '__main__':
 
-    if sys.argv[1] == '-o':
+    parser = argparse.ArgumentParser(description = 'Este script cria uma planilha dos patrimônios contidos em memorandos do IBGE.\nOs memorandos devem estar em formato pdf.')
+    parser.add_argument( '-c', '--converter', help = 'esta opção deve ser usada caso os pdfs originais não sejam pesquisáveis. Os pdfs serão convertidos e salvos na mesma pasta, com o nome original', action = 'store_true')
+    parser.add_argument( 'PATH', help = 'caminho dos arquivos. A planilha resultante será salva na mesma pasta. Caso não seja definido um caminho, o comando será executado na pasta atual', nargs = '?', default = None)
+    args = parser.parse_args()
+
+    if args.PATH != None:
+        # entrar na pasta
+        call('cd %s' % args.PATH, shell = True)
+
+    if args.converter:
         # comando bash que transforma os pdfs comuns em pesquisaveis(subprocess)
-        call('ls | while read line; do ocrmypdf "$line" "$line"; done', shell=True)
+        call('ls | grep .pdf | while read line; do ocrmypdf "$line" "$line"; done', shell = True)
 
 
     # cria a matriz que recebe os dados
     matriz = []
 
     # extrai os dados dos arquivos, preenchendo a matriz
-    ##parseodt(matriz)
     parsepdf(matriz)
 
     # copia os dados da matriz para uma planilha
     geraplanilha(matriz)
+
+
+'''
+
+def cabecalhoodt(texto,cabecalho):
+
+    # extrai o vetor cabecalho inteiro e com imperfeicoes
+    listatexto = str.splitlines(texto)[1].split()
+    
+    # busca a posicao dos dados passados como parametro
+    memoindex = listatexto.index('Memorando')
+    dataindex = listatexto.index('Data:')
+    deindex = listatexto.index('De:')
+    paraindex = listatexto.index('Para:')
+    if 'ref:' in listatexto:
+        fimindex = listatexto.index('ref:')
+    elif 'Ref:' in listatexto:
+        fimindex = listatexto.index('Ref:')
+    elif 'Assunto:' in listatexto:
+        fimindex = listatexto.index('Assunto:')
+    else:
+        print("ERRO!!!")
+        print(cabecalho[0])
+        exit(1)
+
+    # preenche os itens do vetor cabecalho com os dados limpos
+    cabecalho.append(listatexto[memoindex+1:dataindex])
+    cabecalho.append(listatexto[dataindex+1:deindex])
+    cabecalho.append(listatexto[deindex+1:paraindex])
+    cabecalho.append(listatexto[paraindex+1:fimindex])
+
+    # print para conferencia
+    print(cabecalho)
+
+
+def removeXMLMarkup(s, replace_with_space):
+
+    # remove marcacao XML de arquivos de texto(copiado e colado de loook)
+
+    s = re.compile("<!--.*?-->", re.DOTALL).sub('', s)
+    repl = ''
+    if replace_with_space:
+        repl = ' '
+    s = re.compile("<[^>]*>", re.DOTALL).sub(repl, s)
+    return s
+
+
+def parseodt(matriz):
+
+    # extrai os dados de um odt e transforma em texto
+
+    # lista todos os arquivos odt da pasta
+    listaodts = (glob.glob("*.odt"))
+    for f in listaodts:
+
+        # extrai os arquivos internos do odt
+        myfile = zipfile.ZipFile(f)
+        listoffiles = myfile.infolist()
+
+        for s in listoffiles:
+            if s.orig_filename == "content.xml":
+                # cria o vetor cabecalho dos dados
+                cabecalho = []
+                # nome do arquivo
+                cabecalho.append(f)
+                # extrai os dados do odt
+                textoXML = str(myfile.read(s.orig_filename), 'utf-8')
+                # remova a marcacao XML
+                texto = removeXMLMarkup(textoXML, replace_with_space=1)
+                # preeche o cabecalho
+                cabecalho = cabecalhoodt(texto,cabecalho)
+                # extrai os codigos dos patrimonios
+                buscapatrim(texto,matriz,cabecalho)
+
+
+'''
+
