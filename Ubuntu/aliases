@@ -12,5 +12,5 @@ alias officeon='soffice --accept="socket,host=localhost,port=2002;urp;" --norest
 alias leiamemorandos='python3 ~/BMAC/BMAC/Melo/melo.py'
 alias lock='gnome-screensaver-command -l'
 alias memleak='valgrind --tool=memcheck --leak-check=yes'
-alias tabula='java -Dfile.encoding=utf-8 -Xms256M -Xmx1024M -jar ~/Desktop/tabula/tabula.jar'
+alias tabula='java -Dfile.encoding=utf-8 -Xms256M -Xmx1024M -jar ~/Desktop/BIGDATA/tabula/tabula.jar'
 alias aliases='vim ~/BMAC/BMAC/Ubuntu/aliases'
