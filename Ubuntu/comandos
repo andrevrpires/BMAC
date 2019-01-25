@@ -1,0 +1,4 @@
+sudo apt install ttf-mscorefonts-installer
+cat pacotesibge | while read line; do sudo apt -y install ; done
+sudo dpkg --get-selections | grep -v deinstall | sed -e 's/\<install\>//g' > packagespessoal
+
