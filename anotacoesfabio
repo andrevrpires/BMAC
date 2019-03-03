@@ -1,0 +1,30 @@
+passos para analise bidimensional/bivariada
+
+- diagrama
+- correlacao
+
+-1 <= corr(x,y) <= 1
+
+H: corr(x,y) = 0
+A: corr(x,y) != 0
+
+r(corr) = covariancia conjunta, comparada com os desvios padroes??
+metodo minimos quadrados
+
+havendo correlacao
+
+- estimar os parametros da reta
+
+y = f(x) + erro
+
+definir faixas de 5%, 10% muito acima e 5%, 10% muito  abaixo
+inclinacao???
+erro: existem outras variaveis que influenciam
+erro: mais proximo dos extremos, menor erro
+
+##dados, estimativa / populacao, parametro
+
+-------------------
+variaveis categoricas
+
+graus de liberdade: numero de equacoes menos 1
