@@ -1,12 +1,16 @@
 # BMAC
 
+Pasta ALGELINAPLIC
+ - 3.o Semestre: Aplicações de Álgebra Linear
+   A pasta contém Exercícios Programa(EP) entregues. Informações sobre cada tarefa podem ser encontrados nos pdfs.
+
 Pasta ANÁLISE DE DADOS E SIMULAÇÃO
  - 3.o Semestre: Análise de Dados e Simulação
    A pasta contém listas de exercício entregues. Informações sobre cada tarefa podem ser encontrados nos pdfs.
 
 Pasta LABSTERN
  - 3.o Semestre: Laboratório de Computação e Simulação
-   A pasta contém Exercícios Programa(EP) entregues. Para cada EP, foram preparados um código e um relatório sobre o que foi desenvolvido. Nesta matéria, os relatórios foram escritos em inglês.
+   A pasta contém EPs entregues. Para cada EP, foram preparados um código e um relatório sobre o que foi desenvolvido. Nesta matéria, os relatórios foram escritos em inglês.
 
 Pasta ALGORITMOS
  - 2.o Semestre: Princípios de desenvolvimento de Algoritmos
