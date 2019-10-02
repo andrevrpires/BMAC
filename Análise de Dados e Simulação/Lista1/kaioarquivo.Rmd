@@ -1,0 +1,318 @@
+---
+title: "Análise de Dados e Simulação - Lista 1"
+author: "André Vinícius e Kaio Diniz"
+date: "March 30, 2019"
+output: html_document
+---
+```{r anotacao, echo=FALSE}
+#mini relatorio
+#- descrição
+#- sumario(estatisticas descritivas)
+#- Gráficos: boxplot, histogramas, scatterplot
+#- Surpresa (inventar algo interessante)
+#- Análise Primária
+#
+#enviar para faprama@gmail.com
+#subject: citibike
+```
+Este relatório apresentará uma análise dos dados do site https://www.citibikenyc.com/, que contém informações sobre o sistema de bicicletas para transporte público de Nova Yorque. Primeiro, apresentaremos um breve resumo sobre as variáveis contidas no dataset. Em seguida, serão feitas análises sobre a distribuição do tempo de duração das viagens, e sobre a distribuição das retiradas de bicicletas do sistema por segundo. Serão fornecidas ainda informações sobre o volume de saídas e chegadas nas estações sobre um mapa da cidade, e na análise conclusiva especularemos sobre problemas para a disponibilidade do serviço e os desafios de distribuição das bicicletas pelas estações do sistema. 
+
+# Carregando os dados
+```{r loading data, message=FALSE}
+bikeurl <- "https://s3.amazonaws.com/tripdata/201902-citibike-tripdata.csv.zip"
+unzippedfile <- "201902-citibike-tripdata.csv"
+if (!file.exists(unzippedfile))
+{
+  destfile <- "bikesfev.csv.zip"
+  if (!file.exists(destfile))
+  {
+    download.file(bikeurl, destfile = destfile, method = "curl")
+    downloadtime <- date()
+  }
+  unzip(destfile)
+}
+dadosbike <- read.csv(unzippedfile)
+```
+
+# Estatísticas Descritivas
+
+O comando abaixo oferece um primeiro resumo dos dados:
+
+```{r descritiva, message=FALSE}
+summary(dadosbike)
+```
+
+Mesmo com poucas informações, esse resumo já nos revela que algumas das variáveis precisam de um tratamento. A variável "birthyear", por exemplo, pode ser analisada também como qualitativa ordinal.
+```{r descritiva year, message=FALSE}
+tail(sort(summary(as.factor(dadosbike$birth.year))))
+```
+
+Já "gender" e "bikeid" devem ser transformadas de quantitativas para qualitativas nominais, mas sua análise não será feita nesse relatório. Mais adiante, na análise das retiradas de bicicletas do sistema, trataremos as variáveis "startitime" e "stoptime" como variáveis de tempo ao invés de strings.
+
+# Tempo de duração das viagens
+
+Vamos investigar melhor a variável:
+
+```{r outliers tripduration, message=FALSE}
+X <- dadosbike$tripduration
+summary(X)
+boxplot(X)
+plot(sort(X),
+     xlab = "Viagens por ordem de duração",
+     ylab = "Duração",
+     log = "y")
+```
+
+Observamos que as viagens muito longas não acompanham o padrão(tivemos inclusive que colocar o eixo "y" em escala logarítimica). Isso deve acontecer por falhas no sistema em detectar se a viagem foi encerrada, usuários que levam a bicicleta para casa, etc. Em menor grau, existe também uma pequena alteração na quantidade de viagens muito curtas, mesmo com os dados começando aos 61 segundos. Vamos tentar identificar melhor esses eventos, e verificar se estes devem ser considerados na nossa análise, ou seja, se representam a duração comum das viagens. Após, alguns testes, obtivemos os intervalos:
+
+```{r outliers quantiles, message=FALSE}
+quantile(X, probs = c(0, 0.05, 0.25, 0.5, 0.75, 0.99, 1))
+```
+
+Com 5% das viagens durando entre 1 e 2,5 minutos, é certo que a quantidade é significativa. Já o 1% no outro extremo parece pouco representativo em relação ao comportamento que queremos analisar. Eliminando esses dados e fazendo os gráficos novamente, temos uma curva mais coerente, já com o eixo "y" na escala normal: 
+
+```{r plot clean 1, message=FALSE}
+plot(sort(X[X < 2800]),
+     xlab = "Viagens por ordem de duração",
+     ylab = "Duração")
+boxplot(X[X < 2800])
+```
+
+# Testando se o tempo de duração (valores típicos) das viagens segue uma distribuição normal
+
+```{r criando vetor, message=FALSE}
+X <- dadosbike$tripduration[dadosbike$tripduration < 2800]
+```
+
+Verificando os parâmetros da variável:
+
+```{r verificando parâmetros, message=FALSE}
+summary(X)
+```
+```{r verificando dp, message=FALSE}
+sd(X)
+```
+
+Baseando-se na média da nossa variável e seu desvio padrão, temos os seguintes quartis teóricos da distribuição:
+
+```{r theoric quantiles, message=FALSE}
+set.seed(1)
+quantile(rnorm(n = length(X),
+               mean = mean(X),
+               sd = sd(X)
+               ),
+         probs = c(0.25, 0.5, 0.75)
+         )
+```
+
+Assim, devemos verificar que número de realizações da variável X pertence a cada um dos intervalos acima:
+
+```{r contando realizações, message=FALSE}
+observado <- table(cut(X, quantile(rnorm(n = length(X),
+                                         mean = mean(X),
+                                         sd = sd(X)),
+                                   probs = c(0, 0.25, 0.5, 0.75, 1)
+                                   )
+                       )
+                   )
+esperado <- rep(length(X)/4, 4)
+```
+
+Como o total de observações é igual a 934.730, e cada um dos quartis teóricos acima deveria ter ¼ dos dados, temos que as frequências esperadas em cada um dos intervalos acima é de 233.682,5. Criando uma tabela com nossos valores e realizando o teste qui-quadrado, temos
+
+```{r teste qui-quadrado, message=FALSE}
+as.table(rbind(observado, esperado))
+M <- as.table(rbind(observado, esperado))
+barplot(M,
+        beside = TRUE,
+        names.arg = c("Q1", "Q2", "Q3", "Q4"),
+        legend.text = TRUE,
+        args.legend = list(x = "topright", bty = "n"))
+chisq.test(M)
+```
+
+Sendo nossa hipótese nula “O tempo de duração típico das viagens tem uma distribuição normal”, temos que o valor-p é menor que 2,2*10^(-16). Assim, mesmo a um nível de 0.1% é possível rejeitar a hipótese, o que significa que o tempo de duração típico não segue uma distribuição normal com média 669,8  e desvio padrão igual a 505,2.
+
+# Variáveis de começo e término das viagens(retiradas e devoluções de bicicletas)
+
+Como já dissemos anteriormente, precisamos de alguns ajustes antes de tratar essas variáveis. Assim, poderemos estudar sua distribuição:
+```{r ajeitando os dados de tempo, message=FALSE}
+class(dadosbike$starttime)
+class(dadosbike$stoptime)
+library(lubridate)
+dadosbike$starttime <- ymd_hms(dadosbike$starttime)
+dadosbike$stoptime <- ymd_hms(dadosbike$stoptime)
+class(dadosbike$starttime)
+class(dadosbike$stoptime)
+summary(dadosbike$starttime)
+summary(dadosbike$stoptime)
+```
+
+As viagens apresentam uma certa homogeneidade entre as semanas do mês. Verificando sua distribuição entre os dias da semana, verificamos que o maior volume é durante os dias úteis. Apesar de não influenciar no objetivo final da nossa análise, a título de curiosidade, observamos que separando os dados entre "subscribers" e "customers", o padrão de uso em relação aos dias da semana é bem diferente. Porém, como a quantidade de viagens de "customers" é muito menor, o histograma dos "subscribers" é muito próximo do da população total. O último histograma dessa sequência, da distribuição entre os dias do mês, é bem menos homogêneo.
+
+```{r verificando a distribuição na semana e nos dias do mês, message=FALSE}
+# separando a hora da data
+library(tidyr)
+dadosbike <- separate(dadosbike,
+                      starttime,
+                      c("startday", "starttime"),
+                      sep = " ")
+dadosbike <- separate(dadosbike,
+                      stoptime,
+                      c("stopday", "stoptime"),
+                      sep = " ")
+
+library(dplyr)
+#separando os dados que serão tratados
+triptimes <- dadosbike %>%
+  select(starttime,
+         startday,
+         stoptime,
+         stopday,
+         usertype,
+         start.station.id,
+         end.station.id)
+
+triptimes$startday <- ymd(triptimes$startday)
+triptimes$stopday <- ymd(triptimes$stopday)
+triptimes$starttime <- hms(triptimes$starttime)
+triptimes$stoptime <- hms(triptimes$stoptime)
+
+#Viagens por dia da semana
+hist(wday(triptimes$startday),
+     breaks = 0:7,
+     main = "Viagens por dia da semana",
+     xlab = "Dias da Semana",
+     ylab = "Frequência",
+     labels = c("Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab")
+)
+
+# Viagens de "Subscribers"
+hist(wday(triptimes$startday[triptimes$usertype == "Subscriber"]),
+     breaks = 0:7,
+     main = "Viagens por dia da semana (Subscriber)",
+     xlab = "Dias da Semana",
+     ylab = "Frequência",
+     labels = c("Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab")
+)
+
+#Viagens de "Customers"
+hist(wday(triptimes$startday[triptimes$usertype == "Customer"]),
+     breaks = 0:7,
+     main = "Viagens por dia da semana (Customer)",
+     xlab = "Dias da Semana",
+     ylab = "Frequência",
+     labels = c("Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab")
+)
+
+#Viagens por dia do mês
+hist(day(triptimes$startday),
+     breaks = 0:28,
+     main = "Viagens por dia do mês",
+     xlab = "Dias do mês",
+     ylab = "Frequência",
+     labels = c(as.character(1:28))
+)
+```
+
+Refinando a granularidade dos dados, encontramos mais algumas informações. Descobrimos que existem horários de pico de demanda no sistema. Dentro desses horários, encontramos uma distribuição bem homogênea entre os minutos. Decidimos então testar a possibilidade dessa demanda por bicicletas poder ser descrita por um Processo de Poisson. Como as informações da distribuição entre minutos não é precisa(o gráfico ficaria cheio de posições com "zero"), descemos mais um nível e usamos os segundos. Como nossos testes objetivam experimentar o limite de demanda no sistema, escolhemos o dia 05, às 8 horas da manhã.
+
+```{r buscando a granularidade perfeita, message=FALSE}
+hist(hour(triptimes$starttime),
+     breaks = 0:23,
+     main = "Viagens por hora do dia",
+     xlab = "Hora do dia",
+     ylab = "Frequência",
+     labels = c(as.character(1:23))
+)
+
+hist(minute(triptimes$starttime[hour(triptimes$starttime) == 8]),
+     breaks = -1:59,
+     main = "Viagens por minuto às 8 da manhã",
+     xlab = "Minutos",
+     ylab = "Frequência")
+
+hist(seconds(triptimes$starttime[hour(triptimes$starttime) == 8 &
+                                   day(triptimes$startday) == 5]),
+     breaks = seconds(hms("08:00:00")):seconds(hms("09:00:00")),
+     main = "Viagens por segundo às 8 da manhã, dia 05/02/2019",
+     xlab = "Segundos",
+     ylab = "Frequência")
+```
+
+Definimos então nossa variável Y como sendo "Número de retiradas de bicicletas por segundo".
+
+```{r qui-quadrado poisson, message=FALSE}
+# Cada um dos segundos
+cadasegundo <- as.numeric(seconds(
+                          triptimes$starttime[hour(triptimes$starttime) == 8 & 
+                                                day(triptimes$startday) == 5]
+                            )
+                )
+#
+Yobs <- table(factor(cadasegundo,
+                    levels = seconds(hms("08:00:00")):seconds(hms("09:00:00"))))
+observado <- table(Yobs)
+observado
+set.seed(1)
+Yexp <- rpois(length(Yobs), mean(Yobs))
+esperado <- table(Yexp)
+esperado
+P <- as.table(rbind(observado, esperado))
+barplot(P,
+        beside = TRUE,
+        main = "Número de retiradas de bicicletas por segundo",
+        sub = "(dados de 05 de fevereiro, das 8 às 9 horas da manhã)",
+        xlab = "Número de retiradas",
+        ylab = "Frequência",
+        legend.text = TRUE,
+        args.legend = list(x = "topright", bty = "n"))
+chisq.test(P)
+```
+
+Conclui-se que existem evidências na amostra, com um p-valor > 0,82, de que é verdadeira a hipótese nula "O número de retiradas de bicicletas por segundo obedece à uma Distribuição de Poisson com lambda = 1.51".
+
+# Análise Primária - Possibilidades a partir dos dados
+
+Conseguimos, a partir dos dados, encontrar um processo de Poisson nas retiradas de bicicletas de um dia de pico. O procedimento pode ser repetido para as devoluções, assim como para outros dias e horários. Por outro lado, não conseguimos identificar a distribuição da duração das viagens. Mesmo assim, pudemos começar a esboçar uma idéia de como calcular a capacidade máxima do serviço. Isso pode ser obtido a partir das retiradas de bicicletas e do tempo de duração, uma vez que essas duas informações podem revelar quando o máximo de bicicletas está sendo usado ao mesmo tempo. Para finalizar, apresentamos um mapa com as estações com maior demanda de retirada, e maior número de devoluções. Observando essa última representação, percebemos que a capacidade máxima de algumas estacões pode ser atingida rapidamente, enquanto outras estações têm grande número de reposições e podem até equilibrar-se com menos intervenções. Assim, seria necessário um plano para remanejar as bicicletas disponíveis durante o dia.
+
+```{r plotting on map, message=FALSE}
+library(ggmap)
+x <- dadosbike$start.station.longitude
+y <- dadosbike$start.station.latitude
+mapinfo <- data.frame(x, y)
+mapinfo <- unique(mapinfo)
+bbox <- make_bbox(mapinfo$x, mapinfo$y)
+
+#Posições das estações
+get_map(bbox) %>%
+  ggmap() +
+  geom_point(data = mapinfo,
+             aes(x = mapinfo$x,
+                 y = mapinfo$y))
+
+start.station.count <- dadosbike %>%
+  select(start.station.longitude, start.station.latitude) %>%
+  count(start.station.longitude, start.station.latitude)
+
+end.station.count <- dadosbike %>%
+  select(end.station.longitude, end.station.latitude) %>%
+  count(end.station.longitude, end.station.latitude)
+
+#Começos de viagem
+get_map(bbox) %>%
+  ggmap() +
+  geom_point(data = start.station.count,
+             aes(x = start.station.longitude,
+                 y = start.station.latitude),
+             size = (start.station.count$n/2000))
+
+# Finais de viagem
+get_map(bbox) %>%
+  ggmap() +
+  geom_point(data = end.station.count,
+             aes(x = end.station.longitude,
+                 y = end.station.latitude),
+             size = (end.station.count$n/2000))
+```
+

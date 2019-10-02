@@ -1,0 +1,346 @@
+---
+title: "Lista05 _MAE399"
+author: "Samira Tokunaga, Yiying Lin, André Vinícius"
+output: pdf_document
+---
+
+1. Considere $S_n$ como sendo o passeio aleatório simples simétrico ($p = \frac{1}{2}$) em $\mathbb{Z}$.
+
+a. Dizemos que há uma troca de liderança quando, para algum $k$, observamos $S_k=0$, mas $S_{k-1} \neq S_{k+1}$. Sabemos que probabilidade de que, até o instante $2n+1$, ocorram exatamente $r$ trocas de liderança é igual a:
+
+$$\dbinom{2n+1}{n-r}/2^{2n}$$
+
+Considere agora 1.000 simulações para as trajetórias de $S_n$ para $n \in \{0, 1,..., 100\}$. Encontre para cada uma destas 1.000 simulações o número de trocas de lideranças. Com estes dados estime a distribuição do número de trocas de lideranças em trajetorias de tamanho 101. Compare em uma tabela estas estimativas com os valores obtidos pela fórmula descrita no início deste item.
+
+```{r trocadelideranca, message=FALSE}
+
+
+passo <- function(n){
+  
+  #função que gera os dados de um passeio aleatório de tamanho (n)
+  
+  #sorteia os passos
+  steps <- sample(c(-1, 1), n, replace = TRUE)
+  #inicializa o vetor(passeio aleatório) com zero
+  walk <- numeric(1)
+  for (s in 1:length(steps)){
+    #soma os passos
+    walk <- c(walk, walk[s] + steps[s])
+  }
+  #retorna os dados
+  return(walk)
+}
+
+run <- function(nsimul, n){
+  
+  #função que gera uma matriz com simulações de passeios aleatórios
+  #cada linha da matriz é uma simulação de passeio aleatório
+  #cada elemento de uma linha é um passo do passeio aleatório
+  
+  #inicializa a matriz vazia
+  m <- matrix(nrow = 0, ncol = n + 1)
+  #barra de progresso
+  #pb <- txtProgressBar(min = 0, max = nsimul, style = 3)
+  for(i in 1:nsimul){
+    #preenche a matriz com os passeios
+    m <- rbind(m, passo(n))
+    #atualiza a barra de progresso
+    #setTxtProgressBar(pb, i)
+  }
+  #fecha a barra de progresso
+  #close(pb)
+  #retorna os dados
+  return(m)
+}
+
+trocaslidera <- function(matriz){
+  
+  #função que observa as trocas de liderança de uma matriz de passeios aleatórios
+  #o vetor 'ntrocas' conta a quantidade de trocas
+  #o vetor 'ultima' registra a última troca observada
+  
+  #inicializando os vetores vazios
+  ntrocas <- c()
+  ultima <- c()
+  
+  #iterando sobre as linhas da matriz
+  for (j in 1:nrow(matriz)){
+    #inicializa os dados com zero
+    cont = 0
+    ultima[j] = 0
+    #iterando sobre os elementos da linha(passeio aleatório)
+    for (i in 2:(ncol(matriz)-1)){
+      #se encontrar um zero
+      if(matriz[j,i] == 0){
+        #verifica se o eixo foi cruzado
+        if(matriz[j, i+1] != matriz[j, i-1]){
+            #se sim, adiciona ao contador e registra a última troca
+            cont = cont + 1
+            ultima[j] <- i - 1
+          } 
+        }
+    }
+      #ao final da linha, registra a quantidade de trocas
+      ntrocas[j] <- cont
+  }
+  #monta a matriz com os dados
+  dados <- rbind(ntrocas, ultima)
+  #retorna os dados
+  return(dados)
+}
+
+#gerando dados para observação
+passeios <- run(1000, 100)
+trocas <- trocaslidera(passeios)
+
+#calculando a proporção de trocas observadas
+trocasobserv <- table(trocas[1,])/1000
+#função teórica da distribuição de trocas
+teoriatrocas <- function(r, n) (choose(2*n+1, n-r))/2^(2*n)
+#gerando um vetor com os dados teóricos para comparação
+trocasteoric <- numeric(0)
+for(i in 0:(length(trocasobserv)-1)){
+  trocasteoric <- c(trocasteoric, teoriatrocas(i, 50))
+}
+names(trocasteoric) <- c(0:(length(trocasobserv)-1))
+
+#tabela de comparação do observado com o teórico
+trocastabela <- rbind(trocasobserv, trocasteoric)
+trocastabela
+
+```
+
+b. Sabemos também que a probabilidade de que até o instante $2n$(inclusive) a
+última visita à origem tenha ocorrido no instante $2k$ é igual a:
+
+$$\dbinom{2k}{k}\dbinom{2n-2k}{n-k}/2^{2n}$$
+
+Considere agora 1.000 simulacões para as trajetórias de $S_n$ para $n \in \{0, 1,..., 100\}$. Encontre para cada uma destas 1. 000 simulacões o instante da última visita à origem. Com estes dados, estime a distribuição do instante da última à origem em trajetórias de tamanho 101. Compare em uma tabela as estimativas encontradas com os valores obtidos pela fórmula descrita no início deste item.
+
+```{r ultimatroca, message=FALSE}
+#calculando a proporção das últimas trocas observadas
+ultimaobserv <- table(trocas[2,])/1000
+#função teórica da distribuição das últimas trocas
+teoriaultima <- function(k, n) (choose(2*k, k)*choose(2*n-2*k, n-k))/2^(2*n)
+#gerando um vetor com os dados teóricos para comparação
+ultimateoric <- numeric(0)
+for(k in 0:(length(ultimaobserv)-1)){
+  ultimateoric <- c(ultimateoric, teoriaultima(k, 50))
+}
+names(ultimateoric) <- c(seq(0, 2*(length(trocasobserv)-1), 2))
+
+#tabela de comparação do observado com o teórico
+ultimastabela <- rbind(ultimaobserv, ultimateoric)
+ultimastabela
+
+```
+
+2. Vamos pensar agora no problema conhecido como \textbf{Ruína do jogador}, ou seja, um  passeio aleatório simples ($p \in [0, 1]$) em $\mathbb{Z}$, partindo de $x$ $(S_0 = x)$, com barreiras absorventes em $c$ e $d$, com $c \leq x \leq d$. Inicialmente definimos $T_c = inf_n\{S_n = c\}$ e $T_d = inf_n\{S_n = d\}$. Da teoria dos processos estocásticos, sabemos que para $p \neq \frac{1}{2}$, $P(T_d = T_c = \inf) = 0$ e
+
+$$P_x(T_d < T_c) = \frac{1-(q/p)^{x-c}}{1-(q/p)^{d-c}}$$
+
+a. Considere o um passeio onde $p$ seja igual à probabilidade de vencer uma rodada na roleta americana, ou seja, $p = 18/38$(portanto $q = 20/38$). Imagine um jogador que começa com $x = \{10, 20, 30, 40\}$ e decide jogar até chegar em 
+\$50,00 ou até perder tudo. Faça 1.000 simulações para cada uma das fortunas iniciais $x = \{10, 20, 30, 40\}$ de modo a comparar os resultados simulados com
+os obtidos pela fórmula acima.
+
+```{r gamblerruinroleta, message=FALSE}
+gambler_ruin <- function(pwin,
+                         bet,
+                         winvalue,
+                         losevalue = 0){
+  
+  #função que simula um apostador jogando roleta
+  #o parâmetro (pwin) define a probabilidade de vitória
+  #o parâmetro (bet) define a aposta inicial
+  #o parâmetro (winvalue) define quanto o apostador deseja acumular para parar
+  #o parâmetro (losevalue) define o limite de perdas do apostador
+  
+  #variável que conta a quantidade de rodadas até atingir um dos limites
+  #quando gerarmos os dados da simulação, faremos um resumo dessa variável
+  spins <- 0
+  #inicialização das variáveis a serem retornadas
+  result <- data.frame(WIN = logical(), SPINS = numeric())
+  
+  #inicializa a soma acumulada com a aposta inicial
+  soma <- bet
+  #iterar até acumular o desejado ou perder tudo
+  while(soma != winvalue){
+    spins <- spins + 1
+    try <- sample(c(1, -1), 1, prob = c(pwin, (1-pwin)))
+    soma <- soma + try
+    if(soma == 0){
+      #se perder tudo
+      result[1,1] <- FALSE
+      result[1,2] <- spins
+      return(result)
+    }
+  }
+  result[1,1] <- TRUE
+  result[1,2] <- spins
+  return(result)
+}
+
+roulette <- function(n, pwin, bet, winvalue, losevalue = 0){
+  
+  #função que simula (n) tentativas da função gambler_ruin
+  #a função retorna um dataframe com os seguintes resultados:
+  #
+  # WIN - variável lógica: TRUEs são vitórias, FALSEs são derrotas
+  # SPINS - variável quantitativa: quantidade de rodadas para uma tentativa
+  # (é interessante notar o comportamento dessa variável:
+  #  Aparentemente, ela está associada a uma relação entre a distância do
+  #  valor inicial para os limites de parada e a probabilidade de vitória.
+  #  Seu valor máximo parece representar igual probabilidade de resultado final)
+  
+  results <- data.frame(WIN = logical(),
+                        SPINS = numeric())
+  for(i in 1:n) results[i,] <- gambler_ruin(pwin, bet, winvalue, losevalue)
+  return(results)
+}
+
+#x = 10
+#esperado
+(1-(20/18)^10)/(1-(20/18)^50)
+#observado
+summary(roulette(1000, 18/38, 10, 50))
+
+#x = 20
+#esperado
+(1-(20/18)^20)/(1-(20/18)^50)
+#observado
+summary(roulette(1000, 18/38, 20, 50))
+
+#x = 30
+#esperado
+(1-(20/18)^30)/(1-(20/18)^50)
+#observado
+summary(roulette(1000, 18/38, 30, 50))
+
+#x = 40
+#esperado
+(1-(20/18)^40)/(1-(20/18)^50)
+#observado
+summary(roulette(1000, 18/38, 40, 50))
+```
+
+b. Considere agora o passeio simétrico, ou seja, $p = \frac{1}{2}$. Faça o mesmo que foi pedido no item acima, plotando as probabilidades obtidas pela simulação (tambem para $x = \{10, 20, 30, 40\}$) e inferindo sobre qual função melhor se ajusta ao conjunto de pontos obtidos. Fato: $P_x(T_d < T_c)$ é linear em $x$ (fortuna inicial).
+
+
+```{r gamblerruinfair, message=FALSE}
+#x = 10
+#esperado
+10/50
+#observado
+summary(roulette(1000, 1/2, 10, 50))
+
+#x = 20
+#esperado
+20/50
+#observado
+summary(roulette(1000, 1/2, 20, 50))
+
+#x = 30
+#esperado
+30/50
+#observado
+summary(roulette(1000, 1/2, 30, 50))
+
+#x = 40
+#esperado
+40/50
+#observado
+summary(roulette(1000, 1/2, 40, 50))
+
+```
+
+3. Considere agora $S_n$ como sendo o passeio aleatório simples simétrico em $\mathbb{Z^2}$, partindo da origem, ou seja, $S_0 = (0, 0)$. Calcule a média da distância Euclidiana em relação à origem do passeio observada nos instantes $n = \{1.000, 2.000,..., 10.000\}$ para 1.000 simulações(para $S_n = (x_n, y_n)$, definimos a distância Euclidiana como $||Sn||_2 = \sqrt{x^2_n + y^2_n}$). Plote estes pontos em um gráfico, indicando uma função para imitar o comportamento de $E[||Sn||_2]$.
+
+```{r PASS2D, message=FALSE}
+
+PASS2D <- function(n){
+  
+  #função que gera os dados de um passeio aleatório em Z² de tamanho (n)
+  
+  #passos possíveis
+  orderedpairs <- rbind(c(1,0),c(-1,0),c(0,1),c(0,-1))
+  #gerando os passos
+  steps <- orderedpairs[sample(nrow(orderedpairs), size=n, replace=TRUE),]
+  #inicializando a matriz do passeio vazia
+  walk <- matrix(c(0, 0), ncol = 2)
+  for(s in 1:(nrow(steps))){
+    #preenchendo a matriz do passeio
+    walk <- rbind(walk, walk[s,] + steps[s,])
+  }
+  return(walk)
+}
+
+#biblioteca para tratar com matrizes de mais de 2 dimensões
+library(abind)
+
+run2D <- function(runs, n){
+  
+  #função que gera uma matriz em 3 dimensões com simulações de
+  #passeios aleatórios em Z².
+  #a primeira dimensão da matriz é o tamanho do passeio aleatório (n)
+  #a segunda dimensão da matriz são os pares ordenados em Z² (2)
+  #a terceira dimensão da matriz são as simulações (runs)
+  
+  #inicializando matriz em 3 dimensões
+  result <- array(dim = c(n+1, 2, 0))
+  #barra de progresso
+  #pb <- txtProgressBar(min = 0, max = runs, style = 3)
+  #gerar um passeio aleatório para cada simulação
+  for(i in 1:runs){
+    #adicionar o passeio à matriz
+    result <- abind(PASS2D(n), result, along = 3)
+    #atualizar barra de progresso
+    #setTxtProgressBar(pb, i)
+  }
+  #fechar barra de progresso
+  #close(pb)
+  #retornar dados
+  return(result)
+}
+
+#gerando os dados para análise
+dados <- run2D(1000, 10000)
+
+#função para calcular a média das normas observadas
+observednorm <- function(x) mean(sqrt(colSums((dados[x, ,])^2)))
+
+#calcular a norma média observada para todos os pontos
+norms <- numeric(0)
+for(i in 0:10001) norms <- c(norms, observednorm(i))
+
+#plotar as normas médias
+plot(norms,
+     type = "l",
+     main = "Médias das normas observadas para cada instante n",
+     xlab = "Instante",
+     ylab = "Norma",
+     las = 1)
+
+#dado que as normas médias observadas apresentam a curva de uma
+#função raiz, vamos descobrir a constante 'c' que ajusta a curva aos dados
+roots <- numeric(0)
+for(i in 0:10001) roots <- c(roots, sqrt(i))
+c <- norms/roots
+c <- mean(c, na.rm = TRUE)
+
+#estimamos o valor da constante
+c
+
+#gerando tabela comparativa dos dados com a distribuição teórica
+observado <- numeric(0)
+teorico <- numeric(0)
+
+for(i in seq(1000, 10000, 1000)){
+  
+  observado <- c(observado, observednorm(i))
+  teorico <- c(teorico, c*sqrt(i))
+  
+}
+
+tabela <- rbind(observado, teorico)
+tabela
+```

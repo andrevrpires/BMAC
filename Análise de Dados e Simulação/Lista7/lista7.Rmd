@@ -1,0 +1,521 @@
+---
+title: "MAE399 - Lista 7"
+author: "André Vinícius - nUSP = 10737290"
+date: "June 23, 2019"
+output: pdf_document
+---
+Esta é a sétima e última lista de exercícios do curso "Análise de Dados e Simulação". Desta vez, faremos simulações do fluxo de caixa de uma seguradora de carros hipotética. Temos definido que teremos clientes que pagarão um valor mensal pelo seguro, cujo valor será sorteado segundo uma distribuição uniforme com valores entre \$100 e \$200 unidades monetárias. Para cada um desses clientes, temos a probabilidade de sinistro a uma taxa de 1 para cada 24 meses, cujo custo será sorteado segundo uma distribuição exponencial de média igual a \$1.200 unidades monetárias. Por fim, temos que durante o funcionamento da nossa seguradora as vendas de apólices obedeçam a uma distribuição exponencial de taxa mensal igual à 1.
+
+A partir das simulações, identificaremos valores para percentis extremos dos dados em determinados pontos do tempo e apresentaremos esses dados numa tabela. Os valores identificados com o saldo do nosso fluxo de caixa serão plotados num gráfico, juntamente com a curva da sua esperança e 5 simulações dos seus valores. Este processo será repetido com modificações: inicialmente, será determinado um valor de franquia mínimo para que a seguradora arque com o custo do sinistro; depois, faremos uma alteração na distribuição do valor das mensalidades. Ao final, teremos 4 gráficos e 4 tabelas para serem feitas comparações e obtidas conclusões. 
+
+Definidos os objetivos deste relatório e os parâmetros para nossas simulações, iniciaremos codificando a função que simula cada um dos clientes. A descrição dos scripts será feita pelos comentários no corpo das funções.
+
+```{r cliente}
+cliente <- function(contratacao, # data de início do contrato do cliente
+                    duracao, # duração do contrato
+                    franquia = 0 # franquia do sinistro
+                    ){
+  
+  #esta função simula dados de um cliente de uma seguradora de carros,
+  #a partir de uma data inicial de contratação até seu prazo final de duração
+  #os dados gerados se referem a recebimentos mensais e sinistros esperados
+  #as distribuições referentes às simulações estão descritas no relatório
+  
+  
+  #gerando dados de datas e respectivos recebimentos
+  mensalidade <- runif(1, 100, 200) #sorteia valor mensal
+  datarecebs <- contratacao + 0:duracao #define datas dos recebimentos
+  recebs <- c(rep(mensalidade, duracao), 0) #cria vetor dos recebimentos
+  
+  #gerando dados de datas e respectivos custos de sinistros
+  datasinis <- contratacao #registra inicio do contrato
+  while(tail(datasinis, 1) < (contratacao + duracao)) #sorteia datas dos sinistros
+    datasinis <- c(datasinis, (tail(datasinis, 1) + rexp(1, 1/24)))
+  siniscusto <- 0 #inicializa vetor de custo de cada sinistro
+  for(s in 0:length(datasinis)){ #sorteia custos de sinistro
+    custo <- rexp(1, 1/1200)
+    if(custo < franquia) custo <- 0
+    siniscusto <- c(siniscusto, custo)
+  }
+    
+  #organizando os dados em tabelas
+  
+  #gera tabela com datas e recebimentos respectivos
+  recebs <- cbind(datarecebs, recebs)
+  #gera tabela com datas e custos respectivos
+  #com o cuidado de nao simular sinistros fora do prazo do contrato
+  if(tail(datasinis, 1) > tail(datarecebs, 1)){
+    sinis <- cbind(datasinis[1:(length(datasinis) - 1)],
+                   siniscusto[1:(length(datasinis) - 1)])
+  }else{
+    sinis <- cbind(datasinis, siniscusto)
+  }
+  
+  #salva as tabelas numa lista do cliente e retorna os dados da simulacao
+  return(list(entradas = recebs, saidas = sinis))
+  
+}
+```
+
+
+Conforme explicitado, o código acima retorna os dados de entradas e saídas de valores em caixa, mas sem somá-los. A soma será feita mais adiante, quando tivermos todos os clientes já simulados.
+
+Em seguida, simulamos o funcionamento da seguradora por um período de tempo determinado, gerando os dados dos clientes que contratam seus serviços.
+
+
+```{r simula}
+simula <- function(tempo, franquia = 0){
+  
+  #gera datas de novas entradas de clientes
+  contratos <- numeric() # inicializa o vetor de novos contratos
+  novocliente <- rexp(1) # gera a primeira data de contratação
+  while(novocliente < tempo){
+    # gera novas datas até atingir o tempo total de atividade simulado
+    contratos <- c(contratos, novocliente)
+    novocliente <- novocliente + rexp(1)
+  }
+  
+  N <- length(contratos) # obtém o tamanho do vetor de datas de contratação
+  producao <- vector("list", N) # inicializa o vetor de simulações de clientes
+  for(c in 1:N){
+    #gera uma simulação de cliente para cada data de início de contrato
+    #a duração do contrato é delimitada pelo tempo total de atividade simulado
+    producao[[c]] <- cliente(contratos[c],
+                             ceiling(tempo - contratos[c]),
+                             franquia)
+  }
+  return(producao)
+  
+}
+```
+
+Gerados os dados dos clientes, podemos fazer as somas que definem o fluxo de caixa. Acumulamos recebimentos, despesas, e podemos prever o saldo do caixa.
+
+
+```{r organiza}
+organiza <- function(producao){
+  
+  #organizando dados de recebimentos para serem plotados
+  recebimentos <- matrix(nrow = 0, ncol = 2)
+  for(c in 1:length(producao)){
+    recebimentos <- rbind(recebimentos, producao[[c]]$entradas)
+  }
+  recebimentos <- recebimentos[order(recebimentos[,1]),]
+  for(i in 2:nrow(recebimentos)){
+    recebimentos[i, 2] <- recebimentos[i-1, 2] + recebimentos[i, 2]
+  }
+  
+  #organizando dados de despesas para serem plotados
+  despesas <- matrix(nrow = 0, ncol = 2)
+  for(c in 1:length(producao)){
+    despesas <- rbind(despesas, producao[[c]]$saidas)
+  }
+  despesas <- despesas[order(despesas[,1]),]
+  for(i in 2:nrow(despesas)){
+    despesas[i, 2] <- despesas[i-1, 2] + despesas[i, 2]
+  }
+  
+  #organizando dados do saldo para ser plotado
+  saldo <- matrix(nrow = 0, ncol = 2)
+  for(c in 1:length(producao)){
+    saldo <- rbind(saldo, producao[[c]]$entradas)
+    saidastmp <- producao[[c]]$saidas
+    saidastmp[,2] <- saidastmp[,2]*-1
+    saldo <- rbind(saldo, saidastmp)
+  }
+  saldo <- saldo[order(saldo[,1]),]
+  for(i in 2:nrow(saldo)){
+    saldo[i, 2] <- saldo[i-1, 2] + saldo[i, 2]
+  }
+  
+  #retorna os dados em uma lista
+  return(list(recebimentos = recebimentos,
+              despesas = despesas,
+              saldo = saldo))
+}
+```
+
+
+Agora que temos como gerar os dados do fluxo de caixa, podemos gerar simulações do funcionamento da seguradora.
+
+```{r geradados}
+geradados <- function(nsimul, tempo, franquia = 0){
+  
+  #gera 10 x "nsimul" simulações da atividade da seguradora
+  #para o período de tempo fixado pelo parâmetro "tempo"
+  #e coleta os dados para os pontos t = 50, 100, 150, 200, 250,... , 500.
+  
+  #inicializando as matrizes de dados das simulações
+  Rsimulado <- matrix(nrow = 0, ncol = 10)
+  Dsimulado <- matrix(nrow = 0, ncol = 10)
+  Ssimulado <- matrix(nrow = 0, ncol = 10)
+  
+  #executa o laço 10 vezes
+  for(v in 1:10){
+  
+    meusdados <- vector("list", nsimul) # inicializa a lista de simulações
+    #print(paste("Simulação ", v, " de 10", sep = ""))
+    #pb <- txtProgressBar(min = 1, max = nsimul, style = 3) #barra de progresso
+    for(s in 1:nsimul){
+    
+      meusdados[[s]] <- organiza(simula(tempo, franquia)) #gera os dados de cada simulação
+      #setTxtProgressBar(pb, s) #atualiza barra de progresso
+    
+    }
+  
+    #close(pb) #fecha barra de progresso
+    
+    #inicializa matrizes de dados da atual bateria de simulações
+    Rmatriz <- matrix(nrow = nsimul, ncol = 0)
+    Dmatriz <- matrix(nrow = nsimul, ncol = 0)
+    Smatriz <- matrix(nrow = nsimul, ncol = 0)
+  
+    for(t in seq(50, 500, 50)){
+      
+      #coleto os dados de "recebimentos" para o t atual
+      R <- numeric(nsimul)
+      for(s in 1:nsimul){ 
+      
+        dados <- meusdados[[s]]$recebimentos
+        z <- length(dados[dados[,1] <= t,1])
+        R[s] <- dados[z,2]
+      
+      }
+      Rmatriz <- cbind(Rmatriz, R) #adiciona os dados à respectiva coluna
+      
+      #coleto os dados de "despesas" para o t atual
+      D <- numeric(nsimul)
+      for(s in 1:nsimul){ 
+        
+        dados <- meusdados[[s]]$despesas
+        z <- length(dados[dados[,1] <= t,1])
+        D[s] <- dados[z,2]
+      
+      }
+      Dmatriz <- cbind(Dmatriz, D) #adiciona os dados à respectiva coluna
+      
+      #coleto os dados de "saldo" para o "t" atual
+      S <- numeric(nsimul)
+      for(s in 1:nsimul){ 
+        
+        dados <- meusdados[[s]]$saldo
+        z <- length(dados[dados[,1] <= t,1])
+        S[s] <- dados[z,2]
+      
+      }
+      Smatriz <- cbind(Smatriz, S) #adiciona os dados à respectiva coluna
+      
+    }
+    
+    # adiciona os dados da atual bateria de simulações às demais simulações
+    Rsimulado <- rbind(Rsimulado, Rmatriz)
+    Dsimulado <- rbind(Dsimulado, Dmatriz)
+    Ssimulado <- rbind(Ssimulado, Smatriz)
+    
+  } 
+  
+  # coloca nomes nas colunas das matrizes
+  colnames(Rsimulado) <- paste0("R", seq(50, 500, 50))
+  colnames(Dsimulado) <- paste0("D", seq(50, 500, 50))
+  colnames(Ssimulado) <- paste0("S", seq(50, 500, 50))
+  
+  # retorna lista com as matrizes
+  return(list(recebimentos = Rsimulado,
+              despesas = Dsimulado,
+              saldos = Ssimulado))
+
+}
+```
+
+
+De agora em diante, geraremos simulações e visualizações dos dados. Conforme previsto, a primeira simulação gerará dados de contratos sem franquia. Depois da tabela, apresentaremos o primeiro gráfico, que relaciona os dados de saldo da tabela, sua esperança, e algumas simulações. Quanto à curva da Esperança, como sabemos que esta é linear, temos $E[R(t) - D(t)] = E[R(t)] - E[D(t)]$, com as esperanças para um cliente isolado sendo
+$E[R(t)] = \lambda_R tE(Y_R)$ e $E[D(t)] = \lambda_D tE(Y_D)$. Logo,
+$$E[R(t) - D(t)] = \lambda_R tE(Y_R)- \lambda_D tE(Y_D) = t(\lambda_R E(Y_R)- \lambda_D E(Y_D))$$
+Para uma sequência onde são adicionados clientes a uma taxa de $1$ por mês, a esperança de quantidade de clientes para o mês $t$ será também $t$. Assim, a esperança do valor acumulado para esta sequência será:
+$$\sum_{i=1}^t i (\lambda_R E(Y_R)- \lambda_D E(Y_D)) = \frac{t(t+1)}{2}(\lambda_R E(Y_R)- \lambda_D E(Y_D))$$
+
+Repetiremos a mesma curva para a Esperança quando apresentarmos os dados das simulações com franquia, para que possa haver comparação.
+
+
+```{r tabela}
+dados <- geradados(100, 500)
+
+Rtabela <- matrix(nrow = 0, ncol = 2)
+Dtabela <- matrix(nrow = 0, ncol = 2)
+Stabela <- matrix(nrow = 0, ncol = 2)
+for(t in seq(50, 500, 50)){
+  
+  Rtabela <- rbind(Rtabela, quantile(dados$recebimentos[,paste0("R", t)],
+                                     probs = c(0.005, 0.995)))
+  Dtabela <- rbind(Dtabela, quantile(dados$despesas[,paste0("D", t)],
+                                     probs = c(0.005, 0.995)))
+  Stabela <- rbind(Stabela, quantile(dados$saldos[,paste0("S", t)],
+                                     probs = c(0.005, 0.995)))
+  
+}
+
+tabela <- data.frame(R = Rtabela, D = Dtabela, S = Stabela)
+rownames(tabela) <- paste0("t", seq(50, 500, 50))
+colnames(tabela) <- c("R(t) 5%","R(t) 95%",
+                      "D(t) 5%","D(t) 95%",
+                      "R(t)-D(t) 5%","R(t)-D(t) 95%")
+
+tabela
+```
+
+```{r grafico}
+E <- function(x) (x*(x+1)/2)*(1*(200+100)/2 - (1/24)*1200)
+
+curve(E, 0, 500,
+      lwd = 2,
+      ylim = c(0, 1.5e+07),
+      main = "R(t) - D(t): Esperança, 5 Simulações e Percentis",
+      sub = "(sem franquia)",
+      xlab = "Tempo(meses)",
+      ylab = "",
+      las = 1)
+
+cores <- rainbow(5)
+
+for(s in 1:5){
+  
+  simulacao <- organiza(simula(500))
+  lines(simulacao$saldo[,1],
+        simulacao$saldo[,2],
+        col = cores[s])
+  
+}
+
+for(i in seq(50, 500, 50)){
+    
+  #plotando os pontos da tabela
+  points(c(i, i), tabela[paste0("t", i),5:6])
+  
+}
+```
+
+Abaixo, simulamos delimitando os gastos de sinistro pela franquia.
+
+```{r tabelafranquia}
+dados <- geradados(100, 500, 600)
+
+Rtabela <- matrix(nrow = 0, ncol = 2)
+Dtabela <- matrix(nrow = 0, ncol = 2)
+Stabela <- matrix(nrow = 0, ncol = 2)
+for(t in seq(50, 500, 50)){
+  
+  Rtabela <- rbind(Rtabela, quantile(dados$recebimentos[,paste0("R", t)],
+                                     probs = c(0.005, 0.995)))
+  Dtabela <- rbind(Dtabela, quantile(dados$despesas[,paste0("D", t)],
+                                     probs = c(0.005, 0.995)))
+  Stabela <- rbind(Stabela, quantile(dados$saldos[,paste0("S", t)],
+                                     probs = c(0.005, 0.995)))
+  
+}
+
+tabela <- data.frame(R = Rtabela, D = Dtabela, S = Stabela)
+rownames(tabela) <- paste0("t", seq(50, 500, 50))
+colnames(tabela) <- c("R(t) 5%","R(t) 95%",
+                      "D(t) 5%","D(t) 95%",
+                      "R(t)-D(t) 5%","R(t)-D(t) 95%")
+
+tabela
+```
+
+```{r graficofranquia}
+E <- function(x) (x*(x+1)/2)*(1*(200+100)/2 - (1/24)*1200)
+
+curve(E, 0, 500,
+      lwd = 2,
+      ylim = c(0, 1.5e+07),
+      main = "R(t) - D(t): Esperança, 5 Simulações e Percentis",
+      sub = "(franquia = $600)",
+      xlab = "Tempo(meses)",
+      ylab = "",
+      las = 1)
+
+cores <- rainbow(5)
+
+for(s in 1:5){
+  
+  simulacao <- organiza(simula(500, 600))
+  lines(simulacao$saldo[,1],
+        simulacao$saldo[,2],
+        col = cores[s])
+  
+}
+
+for(i in seq(50, 500, 50)){
+    
+  #plotando os pontos da tabela
+  points(c(i, i), tabela[paste0("t", i),5:6])
+  
+}
+```
+
+Repetiremos agora as simulações fazendo uma alteração na distribuição das mensalidades. Usaremos a distribuição exponencial, mas com a mesma média, para que possamos observar a diferença. A escolha da distribuição exponencial se deve ao fato de acreditarmos que essa será a verdadeira distribuição dos valores das apólices: poucas apólices terão valor alto, sendo a maioria de valores menores, com cauda longa. Faremos as simulações para os casos com e sem franquia. Deixamos observado também que a curva da esperança é a mesma, pois foi mantida a média das mensalidades. Antes das simulações, segue a função alterada.
+
+```{r modifica}
+cliente <- function(contratacao, # data de início do contrato do cliente
+                    duracao, # duração do contrato
+                    franquia = 0 # franquia do sinistro
+                    ){
+  
+  #esta função simula dados de um cliente de uma seguradora de carros,
+  #a partir de uma data inicial de contratação até seu prazo final de duração
+  #os dados gerados se referem a recebimentos mensais e sinistros esperados
+  #as distribuições referentes às simulações estão descritas no relatório
+  
+  
+  #gerando dados de datas e respectivos recebimentos
+  mensalidade <- rexp(1, 1/150) #sorteia valor mensal ***ALTERADO***
+  datarecebs <- contratacao + 0:duracao #define datas dos recebimentos
+  recebs <- c(rep(mensalidade, duracao), 0) #cria vetor dos recebimentos
+  
+  #gerando dados de datas e respectivos custos de sinistros
+  datasinis <- contratacao #registra inicio do contrato
+  while(tail(datasinis, 1) < (contratacao + duracao)) #sorteia datas dos sinistros
+    datasinis <- c(datasinis, (tail(datasinis, 1) + rexp(1, 1/24)))
+  siniscusto <- 0 #inicializa vetor de custo de cada sinistro
+  for(s in 0:length(datasinis)){ #sorteia custos de sinistro
+    custo <- rexp(1, 1/1200)
+    if(custo < franquia) custo <- 0
+    siniscusto <- c(siniscusto, custo)
+  }
+    
+  #organizando os dados em tabelas
+  
+  #gera tabela com datas e recebimentos respectivos
+  recebs <- cbind(datarecebs, recebs)
+  #gera tabela com datas e custos respectivos
+  #com o cuidado de nao simular sinistros fora do prazo do contrato
+  if(tail(datasinis, 1) > tail(datarecebs, 1)){
+    sinis <- cbind(datasinis[1:(length(datasinis) - 1)],
+                   siniscusto[1:(length(datasinis) - 1)])
+  }else{
+    sinis <- cbind(datasinis, siniscusto)
+  }
+  
+  #salva as tabelas numa lista do cliente e retorna os dados da simulacao
+  return(list(entradas = recebs, saidas = sinis))
+  
+}
+```
+
+Seguem as tabelas e gráficos.
+
+```{r tabelamodifica}
+dados <- geradados(100, 500)
+
+Rtabela <- matrix(nrow = 0, ncol = 2)
+Dtabela <- matrix(nrow = 0, ncol = 2)
+Stabela <- matrix(nrow = 0, ncol = 2)
+for(t in seq(50, 500, 50)){
+  
+  Rtabela <- rbind(Rtabela, quantile(dados$recebimentos[,paste0("R", t)],
+                                     probs = c(0.005, 0.995)))
+  Dtabela <- rbind(Dtabela, quantile(dados$despesas[,paste0("D", t)],
+                                     probs = c(0.005, 0.995)))
+  Stabela <- rbind(Stabela, quantile(dados$saldos[,paste0("S", t)],
+                                     probs = c(0.005, 0.995)))
+  
+}
+
+tabela <- data.frame(R = Rtabela, D = Dtabela, S = Stabela)
+rownames(tabela) <- paste0("t", seq(50, 500, 50))
+colnames(tabela) <- c("R(t) 5%","R(t) 95%",
+                      "D(t) 5%","D(t) 95%",
+                      "R(t)-D(t) 5%","R(t)-D(t) 95%")
+
+tabela
+```
+
+```{r graficomodifica}
+E <- function(x) (x*(x+1)/2)*(1*150 - (1/24)*1200)
+
+curve(E, 0, 500,
+      lwd = 2,
+      ylim = c(0, 1.5e+07),
+      main = "R(t) - D(t): Esperança, 5 Simulações e Percentis",
+      sub = "(sem franquia, mensalidade com distribuição exponencial)",
+      xlab = "Tempo(meses)",
+      ylab = "",
+      las = 1)
+
+cores <- rainbow(5)
+
+for(s in 1:5){
+  
+  simulacao <- organiza(simula(500, 600))
+  lines(simulacao$saldo[,1],
+        simulacao$saldo[,2],
+        col = cores[s])
+  
+}
+
+for(i in seq(50, 500, 50)){
+    
+  #plotando os pontos da tabela
+  points(c(i, i), tabela[paste0("t", i),5:6])
+  
+}
+```
+
+```{r tabelamodificafranquia}
+dados <- geradados(100, 500, 600)
+
+Rtabela <- matrix(nrow = 0, ncol = 2)
+Dtabela <- matrix(nrow = 0, ncol = 2)
+Stabela <- matrix(nrow = 0, ncol = 2)
+for(t in seq(50, 500, 50)){
+  
+  Rtabela <- rbind(Rtabela, quantile(dados$recebimentos[,paste0("R", t)],
+                                     probs = c(0.005, 0.995)))
+  Dtabela <- rbind(Dtabela, quantile(dados$despesas[,paste0("D", t)],
+                                     probs = c(0.005, 0.995)))
+  Stabela <- rbind(Stabela, quantile(dados$saldos[,paste0("S", t)],
+                                     probs = c(0.005, 0.995)))
+  
+}
+
+tabela <- data.frame(R = Rtabela, D = Dtabela, S = Stabela)
+rownames(tabela) <- paste0("t", seq(50, 500, 50))
+colnames(tabela) <- c("R(t) 5%","R(t) 95%",
+                      "D(t) 5%","D(t) 95%",
+                      "R(t)-D(t) 5%","R(t)-D(t) 95%")
+
+tabela
+```
+
+```{r graficomodificafranquia}
+E <- function(x) (x*(x+1)/2)*(1*150 - (1/24)*1200)
+
+curve(E, 0, 500,
+      lwd = 2,
+      ylim = c(0, 1.5e+07),
+      main = "R(t) - D(t): Esperança, 5 Simulações e Percentis",
+      sub = "(franquia = $600, mensalidade com distribuição exponencial)",
+      xlab = "Tempo(meses)",
+      ylab = "",
+      las = 1)
+
+cores <- rainbow(5)
+
+for(s in 1:5){
+  
+  simulacao <- organiza(simula(500, 600))
+  lines(simulacao$saldo[,1],
+        simulacao$saldo[,2],
+        col = cores[s])
+  
+}
+
+for(i in seq(50, 500, 50)){
+    
+  #plotando os pontos da tabela
+  points(c(i, i), tabela[paste0("t", i),5:6])
+  
+}
+```
+
+Finalizando esta análise, concluímos que a hipótese que julgamos ser real, a da distribuição exponencial dos valores das mensalidades, acarreta em maior risco para o início do funcionamento da seguradora, uma vez que a dispersão das possibilidades para o saldo do fluxo de caixa é maior. Sendo assim, seria necessário um maior investimento inicial para garantir que a empresa possa cumprir com suas obrigações mesmo no pior cenário.
