@@ -1,0 +1,73 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{indentfirst}
+%\usepackage{biblatex}
+%\addbibresource{allreferences.bib}
+
+\title{\Large EP2 \\ Numerical Integration using Monte Carlos Methods}
+\author{André Vinícius Rocha Pires \\ 10737290}
+\date{April 2019}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+This report will document the experience of applying Monte Carlos Methods in numerical integration. The challenge were to calculate the integral with a good precision, defining the stopping criteria which satisfies it, i.e. the minimum number of samples necessary to get the value of the integral with a given precision. The applied methods were:
+
+\begin{itemize}
+    \item Crude
+    \item Hit-and-miss
+    \item Importance Sampling
+    \item Control Variate
+\end{itemize}
+
+\section{The Code}
+For each one of the methods we wrote a function which has as mandatory parameters: (1)the function to be integrated and (2)the number of random samples to use. The problem of defining the stopping criteria was solved with another function, which gets as mandatory arguments: (1)the function to be integrated and (2)the method to be evaluated. In both functions there are some default parameters which can be set too, like the confidence interval, the precision, and the seed for the random number generator. I'd like to register that, although defining a seed makes our results reproducible, for some reason, the solution algorithm does not work for all the seeds. As the exploration of this phenomenom is not our target, we set "seed" as an optional parameter. This way, we can go on and present the mathematical reasons for the implemented stopping criteria.
+
+\section{Defining the Stopping Criteria}
+Let be $f(x), x \in [0,1]$ our function, and $\gamma = \int_{0}^{1}f(x)dx$ the value of its integral. If $\hat{\gamma}$ is the estimated value, the wanted precision level is:
+
+\begin{equation}
+    \frac{\mid\hat{\gamma}-\gamma\mid}{\gamma} < 1\%
+\label{eq:precisionlevel}
+\end{equation}
+
+Here, we have the problem of not knowing the real value of $\gamma$. Being that $\hat{\gamma}$ is an unbiased estimator for $\gamma$ in all the given methods, we will use as our best information:
+
+\begin{equation}
+    E[\hat{\gamma}] = \gamma
+\label{eq:bestgamma}
+\end{equation}
+
+For the difference between the estimator and the real value of our integral, we applied an confidence interval. Here we can securely define to be the worst scenario when the difference is, for a given $n$:
+
+\begin{equation}
+    (E_n[\hat{\gamma}] + \epsilon_n) - 
+    (E_n[\hat{\gamma}] - \epsilon_n) =
+    2 \epsilon_n
+\label{eq:worsterror}
+\end{equation}
+
+\begin{center}
+    with $\epsilon_n = Z \times S_n(\hat{\gamma})/\sqrt{n}$
+\end{center}
+
+\begin{equation}
+    \epsilon_n = Z \times S_n(\hat{\gamma})/\sqrt{n}
+\end{equation}
+
+
+Finally, applying \ref{eq:worsterror} and \ref{eq:bestgamma} to \ref{eq:precisionlevel}, our stopping criteria is to get the least $n$ that satisfies:
+
+\begin{equation}
+    \frac{2 \epsilon_n}{E_n[\hat{\gamma}]} < 0.01
+\label{eq:stoppingcriteria}
+\end{equation}
+
+\section{Conclusion}
+We conclude with the discovery of why the stopping criteria could not be calculated analytically: it has to be achieved stochastically, as our integral and all the estimators that helps us to hit the wanted precision.
+
+%\printbibliography
+
+\end{document}

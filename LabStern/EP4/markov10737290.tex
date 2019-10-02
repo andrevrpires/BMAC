@@ -1,0 +1,252 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,      
+    urlcolor=cyan,
+}
+\usepackage{indentfirst}
+\usepackage{graphicx}
+%\usepackage{biblatex}
+%\addbibresource{allreferences.bib}
+
+\title{\Large{EP4} \\ \Large{Markov Chain Monte Carlo} \\ \small{Definitions, tuning, parameters and precision}}
+\author{André Vinícius Rocha Pires \\ 10737290}
+\date{May 2019}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+In our sequence of experiences applying Monte Carlos Methods in numerical integration, we get to Markov Chain Monte Carlo(MCMC). Now, besides the challenge to calculate the integral with a good precision with the minimum number of samples, we have some concepts to think about. Other problem to solve is that there is a algorithm parameter which needs to be tuned for each function we will integrate. With these questions to be answered, this report is organized with a section for MCMC details and a code section for documentation. 
+
+\section{Particularities on Markov Chain Monte Carlo}
+
+Applying MCMC, one can sample from a function without knowing its \textit{normalizing constant}. This is possible thanks to using either \textit{Metropolis-Hastings Algorithm} or the \textit{Metropolis-Barker Algorithm}. Although this is not the code section, we will explain here how this is implemented. The mathematical proof of its correctness is beyond the scope of this report.
+
+Remembering the definitions of a Markov Chain, we have a \textit{stationary} distribution $S$, and a kernel. The first particularity is that here we are doing continuous Markov Chain and our kernel will be one of that \textit{algorithms} together with a \textit{proposal} distribution $P$. Then:
+
+\vspace{.5cm}
+
+the Metropolis-Hastings algorithm consists in the following:
+\begin{enumerate}
+ \item Pick a initial state $x_0$;
+ \item Set $t = 0$;
+ \item Iterate:
+ \begin{enumerate}
+     \item randomly generate a candidate $x'$ according to $P(x'|x_t)$;
+     \item calculate the acceptance probability $A(x', x_t) = min(1, \frac{S(x')P(x'|x_t)}{S(x_t)P(x_t|x')})$
+     \item Accept or Reject $x'$
+     \begin{enumerate}
+         \item generate a random number $u \sim U(0, 1)$
+         \item if $u \leq A(x', x_t)$ accept $x_{t+1} = x'$
+         \item else $x_{t+1} = x_t$
+     \end{enumerate}
+     \item set $t = t+1$
+ \end{enumerate}
+\end{enumerate}
+
+the Metropolis-Barker algorithm consists in the following:
+\begin{enumerate}
+ \item Pick a initial state $x_0$;
+ \item Set $t = 0$;
+ \item Iterate:
+ \begin{enumerate}
+     \item randomly generate a candidate $x'$ according to $P(x'|x_t)$;
+     \item calculate the acceptance probability $A(x', x_t) = min(1, \frac{S(x')P(x'|x_t)}{S(x_t)P(x_t|x') + S(x')P(x'|x_t)})$
+     \item Accept or Reject $x'$
+     \begin{enumerate}
+         \item generate a random number $u \sim U(0, 1)$
+         \item if $u \leq A(x', x_t)$ accept $x_{t+1} = x'$
+         \item else $x_{t+1} = x_t$
+     \end{enumerate}
+     \item set $t = t+1$
+ \end{enumerate}
+\end{enumerate}
+
+The second particularity refers to the calculation of our acceptance probability. It's the proof that we don't need to normalize our function:
+
+\vspace{.5cm}
+
+If $z$ is a normalizing constant, then:
+$$S(x) = \frac{s(x)}{z} \Rightarrow \frac{S(x')}{S(x_t)} = \frac{s(x')}{s(x_t)}$$
+
+Besides this, if $P$ is symmetric:
+$$P(x'|x_t) = P(x_t|x')$$
+
+Therefore:
+
+on Hastings
+$$\frac{S(x')P(x'|x_t)}{S(x_t)P(x_t|x')} = \frac{s(x')P(x'|x_t)/z}{s(x_t)P(x'|x_t)/z} = \frac{s(x')}{s(x_t)}$$
+
+on Barker
+
+$$\frac{S(x')P(x'|x_t)}{S(x_t)P(x_t|x') + S(x')P(x'|x_t)} = \frac{s(x')P(x'|x_t)/z}{(s(x_t) + s(x'))P(x'|x_t)/z} = \frac{s(x')}{s(x_t) + s(x')}$$
+
+\vspace{.5cm}
+
+Knowing what is the kernel for our continuous Markov Chain, comes the third particularity: we define our \textit{proposal} distribution as $P = N(x_t, \sigma)$. But then we have to discuss what value to give to $\sigma$ so our algorithm has its best performance. This will be done on the code section.
+
+The last particularity refers to a known \textit{praxis} in MCMC, the \textit{burn-in}. It consists on not including a quantity of the first samples in the integral calculation. Here, we will not use \textit{burn-in} on our MCMC. Apart from being a waste of efficiency, our reason is statiscal: if we are making inference from the random numbers generated, and all these events are actually inside the sample space(domain of $S$), then they contribute fairly to our estimate. There is also, in our opinian, a misunderstanding of this concept. In \href{https://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/viewer.htm#statug_introbayes_sect007.htm}{this link}, at the bottom of the page, there is the best explanation we have seen on this subject, which reveals that what people do ins't really \textit{burn-in}.
+
+\section{Code Documentation}
+
+Markov Chain Monte Carlo(MCMC) consists on a group of nested functions. We will start from the inner functions and then go to the outer ones. 
+
+\subsection{Function $step$}
+
+\begin{itemize}
+    \item \textbf{Description}\newline
+    This is the function which implements the \textit{Metropolis Algorithm} for one step, i.e. $x_{i+1}|x_i$. To do this, the function receives $x_i$ as input and returns $x_{i+1}$. The implementation of the algorithm was explained in the previous section.
+    
+    \item \textbf{Math}\newline
+    The basis for this Algorithm are the Markov Chains and the Ergodic Theory. The details are beyond the scope of this report.
+    
+    \item \textbf{Usage}\newline
+    step(x, s, p, mode = "barker")
+    
+    \item \textbf{Arguments}
+    
+    \begin{itemize}
+        \item x: the actual $x$ of the Markov Chain 
+        \item s: the potential stationary distribution 
+        \item p: the proposal distribution
+        \item mode: the algorithm mode. Default "barker"
+    \end{itemize}
+    \item \textbf{Details}\newline
+    It's important to note that the way the \textit{Metropolis Algorithms} are implemented prevents that a $x$ is generated out of the stationary function domain. This is guaranteed because in these regions the probability is $zero$. But also because of this, its necessary to protect the calculation of the acceptance probability from division by zero. Both the restriction on the stationary function domain and the protection to division by zero were implemented using a $if$.
+
+\end{itemize}
+
+\subsection{Function $run$}
+
+\begin{itemize}
+    \item \textbf{Description}\newline
+    This function produces a Markov Chain. It receives a $x_0$ as input and generates the sequence applying iteractively the $step$ function.
+    \item \textbf{Math}\newline
+    The basis for this Algorithm are the Markov Chains and the Ergodic Theory. The details are beyond the scope of this report.
+    
+    \item \textbf{Usage}\newline
+    run(x, s, p, nsteps)
+    
+    \item \textbf{Arguments}
+    \begin{itemize}
+        \item x: the $x_0$ of the Markov Chain 
+        \item s: the potential stationary distribution 
+        \item p: the proposal distribution
+        \item nsteps: the number of steps (samples)
+    \end{itemize}
+    
+\end{itemize}
+
+\subsection{Function $mcmc$}
+
+\begin{itemize}
+    \item \textbf{Description}\newline
+    This function produces one estimate for the density of a given interval in our potential stationary distribution.
+    
+    \item \textbf{Math}\newline
+    The estimation of the density to the interval is given by the proportion of samples in the interval by the total of samples. The basis for this is:
+    $$P(X_n = x|X_0 = x_0) \xrightarrow[n \rightarrow \infty] {}S(x)$$
+    
+    \item \textbf{Usage}\newline
+    mcmc(s, p, lower, upper, nsteps = 1000)
+    
+    \item \textbf{Arguments}
+    
+    \begin{itemize}
+        \item s: the potential stationary distribution 
+        \item p: the proposal distribution
+        \item lower: lower bound of integration
+        \item upper: upper bound of integration
+        \item nsteps: the number of steps (samples). Defaut 1000.
+    \end{itemize}
+\end{itemize}
+
+\subsection{Function $tuning$}
+
+\begin{itemize}
+    \item \textbf{Description}\newline
+    This function estimates the best $\sigma$ for using in the proposal distribution.
+    
+    \item \textbf{Math}\newline
+    The basis for this function is the autocorrelation between the poins in the Markov Chain. Knowing that small correlation implies independence, we sum the total autocorrelation of a given sequence. This is made for each tried $\sigma$ and put in a vector. Then, we can plot this vector and choose the smaller sum to be our optimal $\sigma$. 
+    
+    \item \textbf{Usage}\newline
+    tuning(s, maxsigma, nsteps)
+    
+    \item \textbf{Arguments}
+    
+    \begin{itemize}
+        \item s: the potential stationary distribution 
+        \item maxsigma: integer. The maximum $\sigma$ to be experimented
+        \item nsteps: the number of steps(samples) for the $run$ function nested in this function
+    \end{itemize}
+    \item \textbf{Details}\newline
+    The most interesting thing about this method of finding the best $\sigma$ is to observe the evolution of the autocorrelation on the plot. Also, there is a connetion between this and the real meaning of \textit{burn-in}.
+\end{itemize}
+
+\subsection{Function $mcmc\_integrate$}
+
+\begin{itemize}
+    \item \textbf{Description}\newline
+    This function returns the mean and variance of a series of estimates obtained through the function $mcmc$. The number of estimates is passed to this function as an argument.
+    
+    \item \textbf{Math}\newline
+    The basis to this function is the Central Limit Theorem.
+    
+    \item \textbf{Usage}\newline
+    mcmc\_integrate(s, p, lower, upper, nruns = 10000)
+    
+    \item \textbf{Arguments}
+    
+    \begin{itemize}
+        \item s: the potential stationary distribution 
+        \item p: the proposal distribution
+        \item lower: lower bound of integration
+        \item upper: upper bound of integration
+        \item nruns: number of estimates. Default = 8000
+    \end{itemize}
+\end{itemize}
+
+\subsection{Function $mcmc\_precision$}
+
+\begin{itemize}
+    \item \textbf{Description}\newline
+    The problem of defining the the best number of iterations was solved with a R function that recursively executes the $mcmc\_integrate$ function, until it reaches a mathematical  precision criteria given by the arguments. To do this, is implemented a loop with a stopping criteria that depends on an error tax. This error tax is calculated empirically, with the data produced by the function itself. The returned data, besides the resulting integral, shows the efficiency of the applied method through the number of iterations, the variance reduction and the estimated error tax:
+    
+    \begin{itemize}
+        \item n              : the minimum necessary number of iterations for a given error tolerance
+        \item variance       : the variance achieved
+        \item expected\_value: the integral desired      
+        \item error          : the estimated error tax
+    \end{itemize}
+    
+    \item \textbf{Math}\newline
+    The basis to this function is the Central Limit Theorem.
+    
+    \item \textbf{Usage}\newline
+    mcmc\_precision(s,p,lower, upper,CI = 0.95, errtolerance = 0.01)
+    
+    \item \textbf{Arguments}
+    
+    \begin{itemize}
+        \item s: the potential stationary distribution 
+        \item p: the proposal distribution
+        \item lower: lower bound of integration
+        \item upper: upper bound of integration
+        \item CI: the confidence interval used to define the error. Default = 0.95
+        \item errtolerance: the wanted precision. Default = 0.01
+    \end{itemize}
+    \item \textbf{Details}\newline
+    There is an implementation of a progress bar which shows the evolution of the precision, and the $n$ is incremented in a thousand on each iteration.
+\end{itemize}
+
+
+%\printbibliography
+
+\end{document}
